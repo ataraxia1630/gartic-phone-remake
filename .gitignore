@@ -1,3 +1,8 @@
+# Local recovery and editor questionnaire data
+Assets/_Recovery/
+Assets/_Recovery.meta
+Assets/UserChoices.choices
+Assets/UserChoices.choices.meta
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
@@ -46,3 +51,5 @@ Secrets/
 *.suo
 *.user
 *.userprefs
+
+.vs/
