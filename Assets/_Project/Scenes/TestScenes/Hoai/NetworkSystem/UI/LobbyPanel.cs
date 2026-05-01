@@ -1,13 +1,13 @@
 using System.Text;
-using GarticPhone.Network.Core;
-using GarticPhone.Network.GameModes;
-using GarticPhone.Network.Players;
-using GarticPhone.Network.StateMachine;
+using InkEcho.Network.Core;
+using InkEcho.Network.GameModes;
+using InkEcho.Network.Players;
+using InkEcho.Network.StateMachine;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace GarticPhone.Network.UI
+namespace InkEcho.Network.UI
 {
     [RequireComponent(typeof(CanvasGroup))]
     public class LobbyPanel : MonoBehaviour

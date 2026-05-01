@@ -1,13 +1,13 @@
 using Fusion;
-using GarticPhone.Network.Core;
-using GarticPhone.Network.Data;
-using GarticPhone.Network.Phases;
-using GarticPhone.Network.Players;
+using InkEcho.Network.Core;
+using InkEcho.Network.Data;
+using InkEcho.Network.Phases;
+using InkEcho.Network.Players;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace GarticPhone.Network.UI
+namespace InkEcho.Network.UI
 {
     [RequireComponent(typeof(CanvasGroup))]
     public class GameplayPanel : MonoBehaviour

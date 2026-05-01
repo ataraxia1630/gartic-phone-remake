@@ -1,9 +1,9 @@
-using GarticPhone.Network.Core;
+using InkEcho.Network.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace GarticPhone.Network.UI
+namespace InkEcho.Network.UI
 {
     [RequireComponent(typeof(CanvasGroup))]
     public class ConnectionPanel : MonoBehaviour
