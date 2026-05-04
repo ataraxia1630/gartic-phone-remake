@@ -29,8 +29,6 @@ namespace InkEcho.Network.UI
         private void Awake()
         {
             _group = GetComponent<CanvasGroup>();
-            if (readyButton != null) readyButton.onClick.AddListener(OnReadyClicked);
-            if (startButton != null) startButton.onClick.AddListener(OnStartClicked);
             if (modeSandwichButton != null) modeSandwichButton.onClick.AddListener(() => RequestMode(GameModeType.Sandwich));
             if (modeCoopButton != null) modeCoopButton.onClick.AddListener(() => RequestMode(GameModeType.Coop));
         }
@@ -95,22 +93,22 @@ namespace InkEcho.Network.UI
             if (startButton != null) startButton.interactable = allReady && enoughPlayers;
             if (modeSandwichButton != null) modeSandwichButton.gameObject.SetActive(inLobby && isMaster);
             if (modeCoopButton != null) modeCoopButton.gameObject.SetActive(inLobby && isMaster);
-            if (readyButton != null) readyButton.gameObject.SetActive(inLobby);
+            if (readyButton != null) readyButton.gameObject.SetActive(inLobby & !_localReady);
         }
 
-        private void OnReadyClicked()
+        public void OnReadyClicked()
         {
             _localReady = !_localReady;
             if (NetworkPlayer.Local != null) NetworkPlayer.Local.SetLocalReady(_localReady);
         }
 
-        private void OnStartClicked()
+        public void OnStartClicked()
         {
             var sm = ServiceLocator.Get<GameStateMachine>();
             sm?.Rpc_RequestStart();
         }
 
-        private void RequestMode(GameModeType mode)
+        public void RequestMode(GameModeType mode)
         {
             var sm = ServiceLocator.Get<GameStateMachine>();
             sm?.Rpc_RequestSetMode(mode);

@@ -30,8 +30,6 @@ namespace InkEcho.Network.UI
         private void Awake()
         {
             _group = GetComponent<CanvasGroup>();
-            if (hostButton != null) hostButton.onClick.AddListener(OnHostClicked);
-            if (joinButton != null) joinButton.onClick.AddListener(OnJoinClicked);
         }
 
         private void Start()
@@ -56,7 +54,7 @@ namespace InkEcho.Network.UI
             _group.blocksRaycasts = visible;
         }
 
-        private async void OnHostClicked()
+        public async void OnHostClicked()
         {
             if (!ValidateName()) return;
             SaveName();
@@ -78,7 +76,7 @@ namespace InkEcho.Network.UI
             }
         }
 
-        private async void OnJoinClicked()
+        public async void OnJoinClicked()
         {
             if (!ValidateName()) return;
             if (codeInput == null || string.IsNullOrWhiteSpace(codeInput.text))
