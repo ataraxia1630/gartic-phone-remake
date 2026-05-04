@@ -46,6 +46,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GarticPhone.Network.Players.PlayerSpawner
   networkPlayerPrefab: {fileID: 195424497251306869, guid: fee79a9ebb293664dade43aca95ab7fc, type: 3}
+  drawingNetworkPrefab: {fileID: 8279520961858031592, guid: ed5054eaeb749a8469f151975a6d0cc6, type: 3}
   playerRegistryPrefab: {fileID: 2954764758260079179, guid: 20a2a5839441c7f43b66273a0c7f55aa, type: 3}
   gameStateMachinePrefab: {fileID: -3060446206261113797, guid: 982909cae9142b14e8cebdeabab0497c, type: 3}
   phaseManagerPrefab: {fileID: 8886097597521199886, guid: e44f01933497fe4488fdf4fb6b42ca01, type: 3}

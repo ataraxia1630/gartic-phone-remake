@@ -26,6 +26,8 @@ namespace InkEcho.Network.Core
         public event Action<PlayerRef> OnPlayerJoinedEvent;
         public event Action<PlayerRef> OnPlayerLeftEvent;
         public event Action<ShutdownReason> OnShutdownEvent;
+        public event Action<NetworkRunner> OnSceneLoadStartEvent;
+        public event Action<NetworkRunner> OnSceneLoadDoneEvent;
 
         public static NetworkBootstrap Instance { get; private set; }
 
@@ -103,8 +105,8 @@ namespace InkEcho.Network.Core
 
         public void OnInput(NetworkRunner runner, NetworkInput input) { }
         public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
-        public void OnConnectedToServer(NetworkRunner runner) { }
-        public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
+        void INetworkRunnerCallbacks.OnConnectedToServer(NetworkRunner runner) { }
+        void INetworkRunnerCallbacks.OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
         public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
         public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
         public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
@@ -116,8 +118,8 @@ namespace InkEcho.Network.Core
         public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
         public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
         public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
-        public void OnSceneLoadDone(NetworkRunner runner) { }
-        public void OnSceneLoadStart(NetworkRunner runner) { }
+        public void OnSceneLoadDone(NetworkRunner runner) => OnSceneLoadDoneEvent?.Invoke(runner);
+        public void OnSceneLoadStart(NetworkRunner runner) => OnSceneLoadStartEvent?.Invoke(runner);
         public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
         public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
 

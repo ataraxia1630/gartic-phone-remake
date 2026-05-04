@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: DefaultNetworkConfig
   m_EditorClassIdentifier: Assembly-CSharp::GarticPhone.Network.Core.NetworkConfig
   MaxPlayers: 8
-  MinPlayersToStart: 3
+  MinPlayersToStart: 2
   RoomCodeLength: 6
   RoomCodeRetryAttempts: 5
   PromptPhaseDuration: 30
