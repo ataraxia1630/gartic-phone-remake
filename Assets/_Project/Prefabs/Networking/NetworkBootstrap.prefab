@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4811780597481237995
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9147797974169923380}
+  - component: {fileID: -7575684916573700908}
+  - component: {fileID: 7840349612301445155}
+  m_Layer: 0
+  m_Name: NetworkBootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9147797974169923380
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4811780597481237995}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &-7575684916573700908
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4811780597481237995}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff3fa93a7758e5342a8ab893e5207cfc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GarticPhone.Network.Players.PlayerSpawner
+  networkPlayerPrefab: {fileID: 195424497251306869, guid: fee79a9ebb293664dade43aca95ab7fc, type: 3}
+  drawingNetworkPrefab: {fileID: 8279520961858031592, guid: ed5054eaeb749a8469f151975a6d0cc6, type: 3}
+  playerRegistryPrefab: {fileID: 2954764758260079179, guid: 20a2a5839441c7f43b66273a0c7f55aa, type: 3}
+  gameStateMachinePrefab: {fileID: -3060446206261113797, guid: 982909cae9142b14e8cebdeabab0497c, type: 3}
+  phaseManagerPrefab: {fileID: 8886097597521199886, guid: e44f01933497fe4488fdf4fb6b42ca01, type: 3}
+  albumStorePrefab: {fileID: 9138441510570541049, guid: 6422882a93dc1054a8a982a700ed1f02, type: 3}
+--- !u!114 &7840349612301445155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4811780597481237995}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea940e20c1931cf40b9752fa884c597c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GarticPhone.Network.Core.NetworkBootstrap
+  runnerPrefab: {fileID: 7680709900968176137, guid: 7f01609b530033c4a94fa38380e42da9, type: 3}
+  config: {fileID: 11400000, guid: e034743994a03fa418271e8a89c694a4, type: 2}
