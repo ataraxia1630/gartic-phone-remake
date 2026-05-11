@@ -18,6 +18,8 @@ namespace InkEcho.Network.Core
         public float PromptPhaseDuration = 30f;
         public float DrawPhaseDuration = 60f;
         public float GuessPhaseDuration = 30f;
+        public float ObservePhaseDuration = 4f;
+        public float FinalGuessPhaseDuration = 30f;
         public float RevealPerAlbumDuration = 8f;
 
         [Header("Per-Mode Overrides (optional)")]

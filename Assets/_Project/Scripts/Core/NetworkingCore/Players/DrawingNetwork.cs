@@ -85,7 +85,7 @@ namespace InkEcho.Network.Players
 
             var albumStore = ServiceLocator.Get<AlbumStore>();
             var phaseManager = ServiceLocator.Get<PhaseManager>();
-            if (albumStore != null && phaseManager != null && phaseManager.TryGetAssignment(Runner.LocalPlayer, out var assignment))
+            if (albumStore != null && phaseManager != null && phaseManager.CurrentPhase == PhaseType.Draw && phaseManager.TryGetAssignment(Runner.LocalPlayer, out var assignment))
             {
                 albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, hash, (ushort)_localStrokeCount);
             }
@@ -95,6 +95,18 @@ namespace InkEcho.Network.Players
 
         private void Update()
         {
+            var phaseManager = ServiceLocator.Get<PhaseManager>();
+            if (phaseManager == null || phaseManager.CurrentPhase != PhaseType.Draw)
+            {
+                if (_hasLastSentPoint)
+                {
+                    EndLocalStroke();
+                    _hasLastSentPoint = false;
+                }
+
+                return;
+            }
+
             // Input reading is local - not tied to network authority
             // Each client reads their own mouse input
             if (Input.GetMouseButtonDown(0))

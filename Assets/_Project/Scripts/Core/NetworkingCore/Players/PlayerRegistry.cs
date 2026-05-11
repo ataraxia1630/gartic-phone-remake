@@ -116,9 +116,38 @@ namespace InkEcho.Network.Players
         public List<PlayerRef> GetOrderedPlayers()
         {
             var list = new List<PlayerRef>();
-            foreach (var pair in Slots) list.Add(pair.Key);
+            foreach (var pair in Slots)
+            {
+                if (!pair.Value.IsConnected) continue;
+                list.Add(pair.Key);
+            }
             list.Sort((a, b) => Slots.Get(a).SlotIndex.CompareTo(Slots.Get(b).SlotIndex));
             return list;
+        }
+
+        public bool TryGetSlotIndex(PlayerRef player, out byte slotIndex)
+        {
+            if (Slots.TryGet(player, out var slot))
+            {
+                slotIndex = slot.SlotIndex;
+                return true;
+            }
+
+            slotIndex = byte.MaxValue;
+            return false;
+        }
+
+        public bool TryGetPlayerBySlotIndex(byte slotIndex, out PlayerRef player)
+        {
+            foreach (var pair in Slots)
+            {
+                if (pair.Value.SlotIndex != slotIndex) continue;
+                player = pair.Key;
+                return true;
+            }
+
+            player = PlayerRef.None;
+            return false;
         }
 
         public bool TryGetSlot(PlayerRef player, out PlayerSlotData slot)
