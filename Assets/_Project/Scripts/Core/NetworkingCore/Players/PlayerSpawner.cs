@@ -54,7 +54,11 @@ namespace InkEcho.Network.Players
             {
                 if (networkPlayerPrefab != null)
                 {
-                    runner.Spawn(networkPlayerPrefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
+                    var localPlayer = runner.Spawn(networkPlayerPrefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
+                    if (localPlayer != null)
+                    {
+                        runner.MoveToRunnerScene(localPlayer.gameObject);
+                    }
                     Debug.Log("[PlayerSpawner] Spawned local NetworkPlayer");
                     _localPlayerSpawned = true;
                 }
@@ -81,7 +85,12 @@ namespace InkEcho.Network.Players
                 Debug.LogError($"[PlayerSpawner] {label} prefab not assigned");
                 return;
             }
-            runner.Spawn(prefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
+            var instance = runner.Spawn(prefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
+            if (instance != null)
+            {
+                // Move to runner scene so it survives LoadSceneMode.Single transitions
+                runner.MoveToRunnerScene(instance.gameObject);
+            }
             Debug.Log($"[PlayerSpawner] Spawned {label} (master)");
         }
     }
