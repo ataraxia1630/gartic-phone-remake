@@ -7,5 +7,7 @@ namespace InkEcho.Network.Phases
         Draw = 2,
         Guess = 3,
         Reveal = 4,
+        Observe = 5,
+        FinalGuess = 6,
     }
 }

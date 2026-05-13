@@ -1,20 +1,19 @@
-using System.Collections.Generic;
 using Fusion;
 using InkEcho.Network.Players;
 using InkEcho.Network.Core;
-using UnityEngine;
 
 namespace InkEcho.Network.Data
 {
     public class AlbumStore : NetworkBehaviour
     {
-        public const int MaxEntries = 64;
+        public const int MaxLinksPerChain = PlayerRegistry.MaxPlayers + 1;
+        public const int MaxEntries = PlayerRegistry.MaxPlayers * MaxLinksPerChain;
 
         [Networked, Capacity(MaxEntries)]
         public NetworkArray<AlbumEntry> Entries => default;
 
         [Networked] public byte PlayerCount { get; set; }
-        [Networked] public byte TotalRounds { get; set; }
+        [Networked] public byte LinksPerChain { get; set; }
 
         public override void Spawned()
         {
@@ -26,74 +25,97 @@ namespace InkEcho.Network.Data
             ServiceLocator.Unregister<AlbumStore>(this);
         }
 
-        public void Init(byte playerCount, byte totalRounds)
+        public void Init(byte playerCount)
         {
             if (!HasStateAuthority) return;
             PlayerCount = playerCount;
-            TotalRounds = totalRounds;
-            // initialize entries
-            for (byte r = 0; r < totalRounds; r++)
+            LinksPerChain = (byte)(playerCount + 1);
+            for (byte link = 0; link < LinksPerChain; link++)
             {
-                for (byte s = 0; s < playerCount; s++)
+                for (byte slot = 0; slot < playerCount; slot++)
                 {
-                    var idx = IndexOf(r, s);
-                    Entries.Set(idx, AlbumEntry.Empty(r, s, PlayerRef.None));
+                    var idx = IndexOf(link, slot);
+                    Entries.Set(idx, AlbumEntry.Empty(link, slot, PlayerRef.None));
                 }
             }
         }
 
-        private int IndexOf(int round, int originSlot) => round * PlayerCount + originSlot;
+        private int IndexOf(int chainLink, int originSlot) => chainLink * PlayerCount + originSlot;
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_32> prompt, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
+            var pm = ServiceLocator.Get<Phases.PhaseManager>();
+            if (pm == null || pm.CurrentPhase != Phases.PhaseType.Prompt) return;
             var player = info.Source;
-            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
-            var idx = IndexOf(round, originSlot);
+            if (!pm.TryGetAssignment(player, out var assignment)) return;
+            if (assignment.AlbumOriginSlotIndex != originSlot) return;
+
+            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
             entry.Prompt = prompt;
             entry.OriginPlayer = player;
+            entry.WorkerPlayer = player;
             Entries.Set(idx, entry);
 
-            var registry = ServiceLocator.Get<PlayerRegistry>();
-            registry?.SetSubmittedPhase(player, true);
+            ServiceLocator.Get<PlayerRegistry>()?.SetSubmittedPhase(player, true);
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         public void Rpc_SubmitDrawing(byte originSlot, ulong hash, ushort strokes, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
+            var pm = ServiceLocator.Get<Phases.PhaseManager>();
+            if (pm == null || pm.CurrentPhase != Phases.PhaseType.Draw) return;
             var player = info.Source;
-            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
-            var idx = IndexOf(round, originSlot);
+            if (!pm.TryGetAssignment(player, out var assignment)) return;
+            if (assignment.AlbumOriginSlotIndex != originSlot) return;
+
+            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
             entry.DrawingHash = hash;
             entry.DrawingStrokes = strokes;
+            entry.WorkerPlayer = player;
             Entries.Set(idx, entry);
 
-            var registry = ServiceLocator.Get<PlayerRegistry>();
-            registry?.SetSubmittedPhase(player, true);
+            ServiceLocator.Get<PlayerRegistry>()?.SetSubmittedPhase(player, true);
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_32> guess, RpcInfo info = default)
+        {
+            if (!HasStateAuthority) return;
+            HandleFinalGuess(originSlot, guess, info.Source);
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         public void Rpc_SubmitGuess(byte originSlot, NetworkString<_32> guess, RpcInfo info = default)
         {
+            // Backward-compat: legacy callers route here, accepted only during FinalGuess phase
             if (!HasStateAuthority) return;
-            var player = info.Source;
-            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
-            var idx = IndexOf(round, originSlot);
-            var entry = Entries.Get(idx);
-            entry.Guess = guess;
-            Entries.Set(idx, entry);
-
-            var registry = ServiceLocator.Get<PlayerRegistry>();
-            registry?.SetSubmittedPhase(player, true);
+            HandleFinalGuess(originSlot, guess, info.Source);
         }
 
-        public AlbumEntry GetEntry(int round, int originSlot)
+        private void HandleFinalGuess(byte originSlot, NetworkString<_32> guess, PlayerRef player)
         {
-            var idx = IndexOf(round, originSlot);
+            var pm = ServiceLocator.Get<Phases.PhaseManager>();
+            if (pm == null || pm.CurrentPhase != Phases.PhaseType.FinalGuess) return;
+            if (!pm.TryGetAssignment(player, out var assignment)) return;
+            if (assignment.AlbumOriginSlotIndex != originSlot) return;
+
+            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
+            var entry = Entries.Get(idx);
+            entry.Guess = guess;
+            entry.WorkerPlayer = player;
+            Entries.Set(idx, entry);
+
+            ServiceLocator.Get<PlayerRegistry>()?.SetSubmittedPhase(player, true);
+        }
+
+        public AlbumEntry GetEntry(int chainLink, int originSlot)
+        {
+            var idx = IndexOf(chainLink, originSlot);
             return Entries.Get(idx);
         }
     }
