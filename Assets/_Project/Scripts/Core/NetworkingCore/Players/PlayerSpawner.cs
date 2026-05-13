@@ -57,7 +57,7 @@ namespace InkEcho.Network.Players
                     var localPlayer = runner.Spawn(networkPlayerPrefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
                     if (localPlayer != null)
                     {
-                        runner.MoveToRunnerScene(localPlayer.gameObject);
+                        runner.MakeDontDestroyOnLoad(localPlayer.gameObject);
                     }
                     Debug.Log("[PlayerSpawner] Spawned local NetworkPlayer");
                     _localPlayerSpawned = true;
@@ -88,8 +88,7 @@ namespace InkEcho.Network.Players
             var instance = runner.Spawn(prefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
             if (instance != null)
             {
-                // Move to runner scene so it survives LoadSceneMode.Single transitions
-                runner.MoveToRunnerScene(instance.gameObject);
+                runner.MakeDontDestroyOnLoad(instance.gameObject);
             }
             Debug.Log($"[PlayerSpawner] Spawned {label} (master)");
         }
