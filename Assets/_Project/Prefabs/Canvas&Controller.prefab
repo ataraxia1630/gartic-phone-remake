@@ -198,7 +198,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 10
   m_TargetDisplay: 0
 --- !u!114 &6409394306053278693
 MonoBehaviour:
@@ -212,7 +212,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 800, y: 600}
@@ -420,6 +420,7 @@ GameObject:
   - component: {fileID: 6377018991226753330}
   - component: {fileID: 1018832383608088866}
   - component: {fileID: 252796783188207638}
+  - component: {fileID: 45991946858112237}
   m_Layer: 0
   m_Name: '[LOCAL_CONTROLLER]'
   m_TagString: Untagged
@@ -468,6 +469,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PhaseTimerUI
   _timerText: {fileID: 5755414252468301628}
   _phaseNameText: {fileID: 4396111442777581283}
+--- !u!114 &45991946858112237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6350343955208829475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 847b3e22a56c00f499b03e494b92cb22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PhaseSceneController
 --- !u!1 &7998868768972010590
 GameObject:
   m_ObjectHideFlags: 0
@@ -638,9 +651,9 @@ RectTransform:
   - {fileID: 7662702696897586399}
   m_Father: {fileID: 8531245343921055444}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: -100, y: 50}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8754468546924082238
