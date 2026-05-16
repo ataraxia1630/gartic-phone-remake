@@ -32,6 +32,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Game/Phases/UI_Reveal.unity
     guid: 2c4a3d0e20d28884ea046984ba0e782f
+  - enabled: 1
+    path: Assets/_Project/Scenes/Game/Phases/BasePhase.unity
+    guid: e920af0b72da8d04b852d6ac3ec2f090
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
