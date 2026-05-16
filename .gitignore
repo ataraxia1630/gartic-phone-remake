@@ -1,3 +1,8 @@
+# Local recovery and editor questionnaire data
+Assets/_Recovery/
+Assets/_Recovery.meta
+Assets/UserChoices.choices
+Assets/UserChoices.choices.meta
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
@@ -19,3 +24,32 @@ UserSettings/
 
 .DS_Store
 Thumbs.db
+.fake
+
+# User docs (do not commit developer notes / local docs)
+/docs/
+
+# Common secret / local-only files (add additional patterns as needed)
+# environment files
+.env
+.env.*
+# local settings
+*.local
+# secret keys, certs, keystores
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+# credential/config dumps
+secrets/
+Secrets/
+# IDE/editor local state
+.vscode/
+/.idea/
+*.suo
+*.user
+*.userprefs
+
+.vs/
