@@ -89,6 +89,13 @@ namespace InkEcho.Network.Core
         public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
         {
             OnPlayerLeftEvent?.Invoke(player);
+            StartCoroutine(TryReclaimAuthorityNextFrame());
+        }
+
+        private System.Collections.IEnumerator TryReclaimAuthorityNextFrame()
+        {
+            yield return null;
+            yield return null;
             TryReclaimAuthorityIfMaster();
         }
 
