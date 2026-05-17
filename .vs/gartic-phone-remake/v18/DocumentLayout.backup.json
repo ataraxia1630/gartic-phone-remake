@@ -1,7 +1,16 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Users\\HP\\Desktop\\gartic-phone-remake\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{8886853B-42DB-F62C-0EB5-AC96772EDA77}|Assembly-CSharp.csproj|c:\\users\\hp\\desktop\\gartic-phone-remake\\assets\\scripts\\drawingmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8886853B-42DB-F62C-0EB5-AC96772EDA77}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\drawingmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8886853B-42DB-F62C-0EB5-AC96772EDA77}|Assembly-CSharp.csproj|c:\\users\\hp\\desktop\\gartic-phone-remake\\assets\\scripts\\colorbutton.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8886853B-42DB-F62C-0EB5-AC96772EDA77}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\colorbutton.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -9,11 +18,37 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": -1,
+          "SelectedChildIndex": 0,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "DrawingManager.cs",
+              "DocumentMoniker": "C:\\Users\\HP\\Desktop\\gartic-phone-remake\\Assets\\Scripts\\DrawingManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\DrawingManager.cs",
+              "ToolTip": "C:\\Users\\HP\\Desktop\\gartic-phone-remake\\Assets\\Scripts\\DrawingManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\DrawingManager.cs",
+              "ViewState": "AgIAAKEAAAAAAAAAAAAnwKwAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T15:14:43.512Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ColorButton.cs",
+              "DocumentMoniker": "C:\\Users\\HP\\Desktop\\gartic-phone-remake\\Assets\\Scripts\\ColorButton.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\ColorButton.cs",
+              "ToolTip": "C:\\Users\\HP\\Desktop\\gartic-phone-remake\\Assets\\Scripts\\ColorButton.cs",
+              "RelativeToolTip": "Assets\\Scripts\\ColorButton.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T14:52:31.894Z",
+              "EditorCaption": ""
             }
           ]
         },
