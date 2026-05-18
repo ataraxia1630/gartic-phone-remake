@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEngine;
 using Fusion;
 using InkEcho.Network.Phases;
 
@@ -12,39 +11,20 @@ namespace InkEcho.Network.GameModes.Modes
 
         public override int CalculateTotalRounds(int playerCount)
         {
-            int pairs = Mathf.Max(1, playerCount / 2);
-            return Mathf.Max(3, pairs + 1);
-        }
-
-        public override PhaseType GetPhaseForRound(int roundIndex, int totalRounds)
-        {
-            if (totalRounds <= 0) return PhaseType.None;
-            if (roundIndex == 0) return PhaseType.Prompt;
-            if (roundIndex == totalRounds - 1) return PhaseType.Guess;
-
-            return PhaseType.Draw;
+            // Coop not implemented in v1 — fallback to Sandwich behaviour
+            return playerCount;
         }
 
         public override IReadOnlyList<PhaseAssignment> BuildAssignments(int roundIndex, IReadOnlyList<PlayerRef> orderedPlayers)
         {
+            // Fallback: build solo assignments like Sandwich so mode picker doesn't break
             var n = orderedPlayers.Count;
-            var list = new List<PhaseAssignment>();
-            int pairs = Mathf.Max(1, n / 2);
-
-            for (int p = 0; p < pairs; p++)
+            var list = new List<PhaseAssignment>(n);
+            for (int origin = 0; origin < n; origin++)
             {
-                PlayerRef playerA = orderedPlayers[p * 2];
-                PlayerRef playerB = (p * 2 + 1 < n) ? orderedPlayers[p * 2 + 1] : PlayerRef.None;
-
-                int albumOriginSlot = (p + roundIndex) % pairs;
-
-                list.Add(PhaseAssignment.Pair(playerA, playerB, (byte)albumOriginSlot, (byte)roundIndex));
-                if (playerB.IsRealPlayer)
-                {
-                    list.Add(PhaseAssignment.Pair(playerB, playerA, (byte)albumOriginSlot, (byte)roundIndex));
-                }
+                int workerIndex = (origin + roundIndex) % n;
+                list.Add(PhaseAssignment.Solo(orderedPlayers[workerIndex], (byte)origin, (byte)roundIndex));
             }
-
             return list;
         }
     }
