@@ -13,6 +13,10 @@ namespace InkEcho.Network.StateMachine
         [Networked] public GameStateType CurrentState { get; set; }
         [Networked] public GameModeType SelectedMode { get; set; }
 
+        [Networked] public byte RevealAlbumIndex { get; set; }
+        [Networked] public TickTimer ResultsTimer { get; set; }
+        [Networked] public NetworkBool IsRevealFinished { get; set; }
+
         public event Action<GameStateType> OnStateChanged;
 
         private readonly Dictionary<GameStateType, IGameState> _states = new Dictionary<GameStateType, IGameState>();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Fusion;
 using InkEcho.Network.Core;
@@ -141,23 +141,21 @@ namespace InkEcho.Network.Phases
                 return;
             }
 
-            if (CurrentPhase == PhaseType.Reveal)
+            var nextRound = (byte)(RoundIndex + 1);
+
+            if (nextRound >= TotalRounds)
             {
-                IsGameFinished = true;
-                CurrentPhase = PhaseType.None;
-                PhaseTimer = TickTimer.None;
-                _currentStrategy = null;
+                IsGameFinished = true; 
                 return;
             }
 
-            var nextRound = (byte)(RoundIndex + 1);
-            var nextPhase = _mode.GetPhaseForRound(nextRound, TotalRounds);
             RoundIndex = nextRound;
-            CurrentPhase = nextPhase;
+            CurrentPhase = _mode.GetPhaseForRound(nextRound, TotalRounds);
 
-            if (nextPhase != PhaseType.None && nextPhase != PhaseType.Reveal)
+            if (CurrentPhase == PhaseType.Draw || CurrentPhase == PhaseType.Guess || CurrentPhase == PhaseType.Prompt)
             {
-                RefreshAssignments();
+                var ordered = ServiceLocator.Get<PlayerRegistry>()?.GetOrderedPlayers() ?? new List<PlayerRef>();
+                _assignments = _mode.BuildAssignments(RoundIndex, ordered);
             }
 
             InstallStrategyFor(CurrentPhase);

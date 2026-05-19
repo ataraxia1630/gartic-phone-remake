@@ -35,6 +35,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Game/Phases/BasePhase.unity
     guid: e920af0b72da8d04b852d6ac3ec2f090
+  - enabled: 1
+    path: Assets/_Project/Scenes/Game/Result/ResultScene.unity
+    guid: b03f080981151eb49969116e110eb26a
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
