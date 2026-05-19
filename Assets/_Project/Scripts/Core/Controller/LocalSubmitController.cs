@@ -1,10 +1,20 @@
-﻿using UnityEngine;
+using UnityEngine;
 using InkEcho.Network.Phases;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
+using InkEcho.Hoai.Drawing;
+using TMPro;
 
 public class LocalSubmitController : MonoBehaviour
 {
+    [Header("Phase Input Bindings")]
+    [Tooltip("InputField cho Prompt phase (kéo từ UI_Prompt nếu cùng scene, hoặc null nếu auto-find).")]
+    [SerializeField] private TMP_InputField promptInput;
+    [Tooltip("InputField cho FinalGuess phase.")]
+    [SerializeField] private TMP_InputField finalGuessInput;
+    [Tooltip("DrawingManager đang chạy trong UI_Draw (kéo từ scene khi đã load, hoặc null để auto-find).")]
+    [SerializeField] private DrawingManager drawingManager;
+
     private PhaseType _lastObservedPhase = PhaseType.None;
     private bool _hasSubmittedThisPhase = false;
 
@@ -29,6 +39,9 @@ public class LocalSubmitController : MonoBehaviour
         }
     }
 
+    // Có thể bind nút Submit trong UI gọi vào đây (chạy ngay không đợi timeout).
+    public void SubmitNow() => ForceSubmitCurrentWork();
+
     public void ForceSubmitCurrentWork()
     {
         if (_hasSubmittedThisPhase) return;
@@ -38,30 +51,56 @@ public class LocalSubmitController : MonoBehaviour
         var albumStore = ServiceLocator.Get<AlbumStore>();
         if (phaseManager == null || albumStore == null) return;
 
-        if (phaseManager.TryGetAssignment(phaseManager.Runner.LocalPlayer, out var assignment))
+        if (!phaseManager.TryGetAssignment(phaseManager.Runner.LocalPlayer, out var assignment))
         {
-            switch (phaseManager.CurrentPhase)
-            {
-                case PhaseType.Prompt:
-                    // TODO: Lấy string từ Input Field
-                    string promptText = "Time's up prompt!";
-                    albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText);
-                    break;
-
-                case PhaseType.Draw:
-                    // TODO: Đóng gói hình ảnh
-                    ulong imageHash = 12345UL; // Demo
-                    ushort strokes = 10;       // Demo
-                    albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, imageHash, strokes);
-                    break;
-
-                case PhaseType.Guess:
-                    // TODO: Lấy string từ Input Field
-                    string guessText = "Time's up guess!";
-                    albumStore.Rpc_SubmitGuess(assignment.AlbumOriginSlotIndex, guessText);
-                    break;
-            }
-            Debug.Log($"[LocalSubmit] Ép nộp bài thành công cho phase {phaseManager.CurrentPhase}");
+            Debug.Log($"[LocalSubmit] Local player không có assignment trong phase {phaseManager.CurrentPhase}, skip.");
+            return;
         }
+
+        switch (phaseManager.CurrentPhase)
+        {
+            case PhaseType.Prompt:
+                string promptText = promptInput != null && !string.IsNullOrWhiteSpace(promptInput.text)
+                    ? promptInput.text.Trim() : "(empty)";
+                albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText);
+                break;
+
+            case PhaseType.Draw:
+                SubmitDrawing(assignment.ChainLinkIndex, assignment.AlbumOriginSlotIndex);
+                break;
+
+            case PhaseType.FinalGuess:
+                string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
+                    ? finalGuessInput.text.Trim() : "(empty)";
+                albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guessText);
+                break;
+        }
+        Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
+    }
+
+    private void SubmitDrawing(byte chainLink, byte originSlot)
+    {
+        if (drawingManager == null) drawingManager = FindObjectOfType<DrawingManager>();
+        if (drawingManager == null)
+        {
+            Debug.LogWarning("[LocalSubmit] Không tìm thấy DrawingManager — bỏ qua submit drawing.");
+            return;
+        }
+
+        var png = drawingManager.EncodeAsPng();
+        if (png == null || png.Length == 0)
+        {
+            Debug.LogWarning("[LocalSubmit] EncodeAsPng trả về null/empty.");
+            return;
+        }
+
+        var channel = ServiceLocator.Get<DrawingChannel>();
+        if (channel == null)
+        {
+            Debug.LogError("[LocalSubmit] DrawingChannel chưa được spawn — không gửi được tranh.");
+            return;
+        }
+
+        channel.SubmitLocalDrawing(chainLink, originSlot, png);
     }
 }

@@ -34,6 +34,13 @@ public class DrawingManager : MonoBehaviour
     IEnumerator Start()
     {
         yield return null;
+
+        if (drawingCanvas == null)
+        {
+            Debug.LogError("[DrawingManager] drawingCanvas (RawImage) chưa được gán trong Inspector! Hãy kéo RawImage vào field 'Drawing Canvas'.", this);
+            yield break;
+        }
+
         // Lấy kích thước thực của RawImage
         int width = Mathf.RoundToInt(drawingCanvas.rectTransform.rect.width);
         int height = Mathf.RoundToInt(drawingCanvas.rectTransform.rect.height);
@@ -244,5 +251,64 @@ public class DrawingManager : MonoBehaviour
         texture.Apply();
         drawingCanvas.texture = texture;
         isDrawing = false;
+    }
+
+    public bool HasTexture => texture != null;
+
+    public byte[] EncodeAsPng()
+    {
+        if (texture == null) return null;
+        return texture.EncodeToPNG();
+    }
+
+    public void ApplyPng(byte[] png)
+    {
+        if (png == null || png.Length == 0) return;
+        if (texture == null) return;
+        var tmp = new Texture2D(2, 2);
+        if (!tmp.LoadImage(png)) { Destroy(tmp); return; }
+
+        if (tmp.width == textureWidth && tmp.height == textureHeight)
+        {
+            texture.SetPixels(tmp.GetPixels());
+        }
+        else
+        {
+            var resampled = ResamplePixels(tmp, textureWidth, textureHeight);
+            texture.SetPixels(resampled);
+        }
+        texture.Apply();
+        drawingCanvas.texture = texture;
+        undoStack.Clear();
+        redoStack.Clear();
+        Destroy(tmp);
+    }
+
+    public void ResetCanvas()
+    {
+        if (texture == null) return;
+        texture.SetPixels(clearColors);
+        texture.Apply();
+        drawingCanvas.texture = texture;
+        undoStack.Clear();
+        redoStack.Clear();
+        lastPos = null;
+        isDrawing = false;
+    }
+
+    private static Color[] ResamplePixels(Texture2D source, int targetW, int targetH)
+    {
+        var src = source.GetPixels();
+        var dst = new Color[targetW * targetH];
+        for (int y = 0; y < targetH; y++)
+        {
+            int sy = Mathf.Clamp((int)((y + 0.5f) * source.height / targetH), 0, source.height - 1);
+            for (int x = 0; x < targetW; x++)
+            {
+                int sx = Mathf.Clamp((int)((x + 0.5f) * source.width / targetW), 0, source.width - 1);
+                dst[y * targetW + x] = src[sy * source.width + sx];
+            }
+        }
+        return dst;
     }
 }

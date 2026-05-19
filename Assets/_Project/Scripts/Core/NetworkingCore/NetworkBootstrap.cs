@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Fusion;
 using Fusion.Sockets;
+using InkEcho.Hoai.Drawing;
 using InkEcho.Network.Data;
 using InkEcho.Network.Phases;
 using InkEcho.Network.Players;
@@ -123,7 +124,11 @@ namespace InkEcho.Network.Core
         }
         public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
         public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
-        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
+        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
+        {
+            var channel = ServiceLocator.Get<DrawingChannel>();
+            if (channel != null) channel.HandleReliableData(player, key, data);
+        }
         public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
         public void OnSceneLoadDone(NetworkRunner runner) => OnSceneLoadDoneEvent?.Invoke(runner);
         public void OnSceneLoadStart(NetworkRunner runner) => OnSceneLoadStartEvent?.Invoke(runner);
@@ -138,6 +143,7 @@ namespace InkEcho.Network.Core
             Reclaim(ServiceLocator.Get<GameStateMachine>());
             Reclaim(ServiceLocator.Get<PhaseManager>());
             Reclaim(ServiceLocator.Get<AlbumStore>());
+            Reclaim(ServiceLocator.Get<DrawingChannel>());
         }
 
         private void Reclaim(NetworkBehaviour behaviour)
