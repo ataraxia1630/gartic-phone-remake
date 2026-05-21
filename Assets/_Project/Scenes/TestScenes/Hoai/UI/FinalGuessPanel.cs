@@ -79,7 +79,7 @@ namespace InkEcho.Hoai.UI
             if (pm.CurrentPhase != PhaseType.FinalGuess) return;
             if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment)) return;
 
-            album.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, input.text.Trim());
+            //album.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, input.text.Trim());
             _submitted = true;
             if (submitButton != null) submitButton.interactable = false;
             if (statusLabel != null) statusLabel.text = "Đã gửi đoán, chờ người khác...";

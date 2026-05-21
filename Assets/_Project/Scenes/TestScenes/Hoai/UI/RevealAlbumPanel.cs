@@ -50,7 +50,7 @@ namespace InkEcho.Hoai.UI
                 }
                 else if (link == links - 1)
                 {
-                    _sb.Append("[Final Guess] ").AppendLine(entry.Guess.ToString());
+                    //_sb.Append("[Final Guess] ").AppendLine(entry.Guess.ToString());
                 }
                 else
                 {
