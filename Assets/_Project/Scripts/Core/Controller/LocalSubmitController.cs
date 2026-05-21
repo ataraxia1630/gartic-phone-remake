@@ -45,7 +45,7 @@ public class LocalSubmitController : MonoBehaviour
                 case PhaseType.Prompt:
                     // TODO: Lấy string từ Input Field
                     string promptText = "Time's up prompt!";
-                    albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText);
+                    //albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText);
                     break;
 
                 case PhaseType.Draw:
@@ -58,7 +58,7 @@ public class LocalSubmitController : MonoBehaviour
                 case PhaseType.Guess:
                     // TODO: Lấy string từ Input Field
                     string guessText = "Time's up guess!";
-                    albumStore.Rpc_SubmitGuess(assignment.AlbumOriginSlotIndex, guessText);
+                    //albumStore.Rpc_SubmitGuess(assignment.AlbumOriginSlotIndex, guessText);
                     break;
             }
             Debug.Log($"[LocalSubmit] Ép nộp bài thành công cho phase {phaseManager.CurrentPhase}");

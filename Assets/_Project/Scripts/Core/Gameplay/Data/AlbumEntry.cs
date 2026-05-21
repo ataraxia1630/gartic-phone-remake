@@ -9,10 +9,12 @@ namespace InkEcho.Network.Data
         public PlayerRef OriginPlayer;
         public PlayerRef WorkerPlayer;
 
-        public NetworkString<_32> Prompt;
+        public NetworkString<_128> Prompt;
         public ulong DrawingHash;
         public ushort DrawingStrokes;
-        public NetworkString<_32> Guess;
+
+        public NetworkString<_64> GuessRole0;
+        public NetworkString<_64> GuessRole1;
 
         public static AlbumEntry Empty(byte chainLink, byte origin, PlayerRef owner)
         {
@@ -22,10 +24,11 @@ namespace InkEcho.Network.Data
                 OriginSlotIndex = origin,
                 OriginPlayer = owner,
                 WorkerPlayer = PlayerRef.None,
-                Prompt = new NetworkString<_32>(""),
+                Prompt = new NetworkString<_128>(""),
                 DrawingHash = 0UL,
                 DrawingStrokes = 0,
-                Guess = new NetworkString<_32>("")
+                GuessRole0 = new NetworkString<_64>(""),
+                GuessRole1 = new NetworkString<_64>("")
             };
         }
     }

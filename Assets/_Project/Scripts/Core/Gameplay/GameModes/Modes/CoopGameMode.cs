@@ -38,10 +38,10 @@ namespace InkEcho.Network.GameModes.Modes
 
                 int albumOriginSlot = (p + roundIndex) % pairs;
 
-                list.Add(PhaseAssignment.Pair(playerA, playerB, (byte)albumOriginSlot, (byte)roundIndex));
+                list.Add(PhaseAssignment.Pair(playerA, playerB, (byte)albumOriginSlot, (byte)roundIndex, 0));
                 if (playerB.IsRealPlayer)
                 {
-                    list.Add(PhaseAssignment.Pair(playerB, playerA, (byte)albumOriginSlot, (byte)roundIndex));
+                    list.Add(PhaseAssignment.Pair(playerB, playerA, (byte)albumOriginSlot, (byte)roundIndex, 1));
                 }
             }
 
