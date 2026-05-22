@@ -16,4 +16,12 @@ MonoBehaviour:
   PromptPhaseDuration: -1
   DrawPhaseDuration: -1
   GuessPhaseDuration: -1
+  ObservePhaseDuration: -1
+  FinalGuessPhaseDuration: -1
   RevealPerAlbumDuration: -1
+  PromptSceneName: UI_Prompt_Coop
+  ObserveSceneName: UI_Observe
+  DrawSceneName: UI_Draw
+  GuessSceneName: UI_Guess
+  FinalGuessSceneName: UI_FinalGuess
+  RevealSceneName: UI_Reveal

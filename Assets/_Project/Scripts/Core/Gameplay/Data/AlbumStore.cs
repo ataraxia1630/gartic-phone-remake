@@ -1,4 +1,4 @@
-using Fusion;
+﻿using Fusion;
 using InkEcho.Network.Players;
 using InkEcho.Network.Core;
 
@@ -43,23 +43,31 @@ namespace InkEcho.Network.Data
         private int IndexOf(int chainLink, int originSlot) => chainLink * PlayerCount + originSlot;
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_32> prompt, RpcInfo info = default)
+        public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_128> prompt, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
-            var pm = ServiceLocator.Get<Phases.PhaseManager>();
-            if (pm == null || pm.CurrentPhase != Phases.PhaseType.Prompt) return;
             var player = info.Source;
-            if (!pm.TryGetAssignment(player, out var assignment)) return;
-            if (assignment.AlbumOriginSlotIndex != originSlot) return;
-
-            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
+            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
+            var idx = IndexOf(round, originSlot);
             var entry = Entries.Get(idx);
-            entry.Prompt = prompt;
+
+            string currentText = entry.Prompt.ToString();
+            string newText = prompt.ToString();
+
+            if (roleIndex == 1) 
+            {
+                entry.Prompt = new NetworkString<_128>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
+            }
+            else
+            {
+                entry.Prompt = new NetworkString<_128>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
+            }
+
             entry.OriginPlayer = player;
-            entry.WorkerPlayer = player;
             Entries.Set(idx, entry);
 
-            ServiceLocator.Get<PlayerRegistry>()?.SetSubmittedPhase(player, true);
+            var registry = ServiceLocator.Get<PlayerRegistry>();
+            registry?.SetSubmittedPhase(player, true);
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
@@ -83,34 +91,27 @@ namespace InkEcho.Network.Data
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_32> guess, RpcInfo info = default)
+        public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_64> guess, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
-            HandleFinalGuess(originSlot, guess, info.Source);
-        }
-
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void Rpc_SubmitGuess(byte originSlot, NetworkString<_32> guess, RpcInfo info = default)
-        {
-            // Backward-compat: legacy callers route here, accepted only during FinalGuess phase
-            if (!HasStateAuthority) return;
-            HandleFinalGuess(originSlot, guess, info.Source);
-        }
-
-        private void HandleFinalGuess(byte originSlot, NetworkString<_32> guess, PlayerRef player)
-        {
-            var pm = ServiceLocator.Get<Phases.PhaseManager>();
-            if (pm == null || pm.CurrentPhase != Phases.PhaseType.FinalGuess) return;
-            if (!pm.TryGetAssignment(player, out var assignment)) return;
-            if (assignment.AlbumOriginSlotIndex != originSlot) return;
-
-            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
+            var player = info.Source;
+            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
+            var idx = IndexOf(round, originSlot);
             var entry = Entries.Get(idx);
-            entry.Guess = guess;
-            entry.WorkerPlayer = player;
+
+            if (roleIndex == 0)
+            {
+                entry.GuessRole0 = guess;
+            }
+            else if (roleIndex == 1)
+            {
+                entry.GuessRole1 = guess;
+            }
+
             Entries.Set(idx, entry);
 
-            ServiceLocator.Get<PlayerRegistry>()?.SetSubmittedPhase(player, true);
+            var registry = ServiceLocator.Get<PlayerRegistry>();
+            registry?.SetSubmittedPhase(player, true);
         }
 
         public AlbumEntry GetEntry(int chainLink, int originSlot)

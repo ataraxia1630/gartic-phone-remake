@@ -9,6 +9,8 @@ namespace InkEcho.Network.Phases
         public byte AlbumOriginSlotIndex;
         public byte ChainLinkIndex;
 
+        public byte PairRole;
+
         public bool HasSecondary => SecondaryWorker.IsRealPlayer;
 
         public static PhaseAssignment Solo(PlayerRef worker, byte originSlot, byte chainLink)
@@ -19,10 +21,11 @@ namespace InkEcho.Network.Phases
                 SecondaryWorker = PlayerRef.None,
                 AlbumOriginSlotIndex = originSlot,
                 ChainLinkIndex = chainLink,
+                PairRole = 0
             };
         }
 
-        public static PhaseAssignment Pair(PlayerRef a, PlayerRef b, byte originSlot, byte chainLink)
+        public static PhaseAssignment Pair(PlayerRef a, PlayerRef b, byte originSlot, byte chainLink, byte role)
         {
             return new PhaseAssignment
             {
@@ -30,6 +33,7 @@ namespace InkEcho.Network.Phases
                 SecondaryWorker = b,
                 AlbumOriginSlotIndex = originSlot,
                 ChainLinkIndex = chainLink,
+                PairRole = role
             };
         }
     }

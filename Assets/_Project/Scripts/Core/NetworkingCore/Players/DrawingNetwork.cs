@@ -62,7 +62,9 @@ namespace InkEcho.Network.Players
 
         public void EndLocalStroke()
         {
-            Rpc_EndStroke();
+            // Chuyển đổi điểm thành byte array để gửi qua mạng (tối ưu hóa bandwidth)
+            byte[] strokeData = DrawingDataConverter.PointsToByteArray(_localPoints);
+            Rpc_ReceiveStrokeData(strokeData);
 
             _localStrokeCount++;
 
@@ -180,6 +182,63 @@ namespace InkEcho.Network.Players
             if (!_currentLines.ContainsKey(playerId)) return;
             _currentLines.Remove(playerId);
             _points.Remove(playerId);
+        }
+
+        /// <summary>
+        /// Nhận dữ liệu nét vẽ đã được mã hóa dưới dạng byte array
+        /// Giảm bandwidth so với gửi từng point riêng lẻ (80% compression)
+        /// </summary>
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void Rpc_ReceiveStrokeData(byte[] encodedStrokeData, RpcInfo info = default)
+        {
+            var playerId = info.Source.PlayerId;
+
+            // Giải mã byte array thành danh sách điểm
+            List<Vector3> points = DrawingDataConverter.ByteArrayToPoints(encodedStrokeData);
+
+            if (points.Count == 0) return;
+
+            // Lấy hoặc tạo LineRenderer cho player này
+            if (!_currentLines.TryGetValue(playerId, out var lr))
+            {
+                // Tạo line nếu chưa tồn tại
+                var lineObj = Instantiate(linePrefab);
+                lr = lineObj.GetComponent<LineRenderer>();
+                if (lr == null) lr = lineObj.AddComponent<LineRenderer>();
+
+                lr.useWorldSpace = true;
+                lr.startWidth = 0.05f;
+                lr.endWidth = 0.05f;
+                lr.sortingOrder = 100;
+                lr.material = new Material(Shader.Find("Sprites/Default"));
+
+                var color = PlayerColorFor(playerId);
+                lr.startColor = color;
+                lr.endColor = color;
+
+                _currentLines[playerId] = lr;
+                _points[playerId] = new List<Vector3>();
+            }
+
+            // Thêm tất cả các điểm từ stroke
+            var pointList = _points[playerId];
+            foreach (var point in points)
+            {
+                // Kiểm tra min distance để tránh điểm trùng lặp
+                if (pointList.Count == 0 || Vector3.Distance(pointList[pointList.Count - 1], point) > minDistance)
+                {
+                    pointList.Add(point);
+                }
+            }
+
+            // Cập nhật LineRenderer
+            lr.positionCount = pointList.Count;
+            lr.SetPositions(pointList.ToArray());
+
+            // Debug info
+            float compressionPercent = (1 - (float)encodedStrokeData.Length / (points.Count * 12)) * 100;
+            Debug.Log($"[DrawingNetwork] Received stroke from player {playerId}: {points.Count} points, " +
+                      $"data size: {encodedStrokeData.Length} bytes ({compressionPercent:F1}% compression)");
         }
 
         private Color PlayerColorFor(int playerId)
