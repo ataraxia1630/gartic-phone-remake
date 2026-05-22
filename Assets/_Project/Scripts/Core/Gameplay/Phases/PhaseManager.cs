@@ -152,12 +152,8 @@ namespace InkEcho.Network.Phases
             RoundIndex = nextRound;
             CurrentPhase = _mode.GetPhaseForRound(nextRound, TotalRounds);
 
-            if (CurrentPhase == PhaseType.Draw || CurrentPhase == PhaseType.Guess || CurrentPhase == PhaseType.Prompt)
-            {
-                var ordered = ServiceLocator.Get<PlayerRegistry>()?.GetOrderedPlayers() ?? new List<PlayerRef>();
-                _assignments = _mode.BuildAssignments(RoundIndex, ordered);
-            }
-
+            // Assignments được rebuild lazy bởi RefreshAssignments() (đọc shuffled play order),
+            // không eager build ở đây để tránh dùng nhầm slot-order.
             InstallStrategyFor(CurrentPhase);
         }
 

@@ -5,6 +5,7 @@ using InkEcho.Network.Players;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Fusion;
 
 namespace InkEcho.Hoai.Drawing
 {
