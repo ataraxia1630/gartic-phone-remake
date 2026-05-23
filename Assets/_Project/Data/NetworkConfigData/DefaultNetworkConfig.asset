@@ -13,12 +13,14 @@ MonoBehaviour:
   m_Name: DefaultNetworkConfig
   m_EditorClassIdentifier: Assembly-CSharp::GarticPhone.Network.Core.NetworkConfig
   MaxPlayers: 8
-  MinPlayersToStart: 2
+  MinPlayersToStart: 1
   RoomCodeLength: 6
   RoomCodeRetryAttempts: 5
   PromptPhaseDuration: 30
   DrawPhaseDuration: 60
   GuessPhaseDuration: 30
+  ObservePhaseDuration: 4
+  FinalGuessPhaseDuration: 30
   RevealPerAlbumDuration: 8
   ModeConfigs:
   - {fileID: 11400000, guid: e0a3b230a1515eb46a42e6a7ca89b133, type: 2}

@@ -1,9 +1,10 @@
-using System.Collections.Generic;
 using Fusion;
-using UnityEngine;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
 using InkEcho.Network.Phases;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace InkEcho.Network.Players
 {
@@ -62,9 +63,7 @@ namespace InkEcho.Network.Players
 
         public void EndLocalStroke()
         {
-            // Chuyển đổi điểm thành byte array để gửi qua mạng (tối ưu hóa bandwidth)
-            byte[] strokeData = DrawingDataConverter.PointsToByteArray(_localPoints);
-            Rpc_ReceiveStrokeData(strokeData);
+            if (_localPoints.Count == 0) { _localPoints.Clear(); return; }
 
             _localStrokeCount++;
 
@@ -85,13 +84,18 @@ namespace InkEcho.Network.Players
                 hash *= 1099511628211UL;
             }
 
-            var albumStore = ServiceLocator.Get<AlbumStore>();
+            byte chainLink = 0xFF, originSlot = 0xFF;
             var phaseManager = ServiceLocator.Get<PhaseManager>();
-            if (albumStore != null && phaseManager != null && phaseManager.CurrentPhase == PhaseType.Draw && phaseManager.TryGetAssignment(Runner.LocalPlayer, out var assignment))
+            var albumStore = ServiceLocator.Get<AlbumStore>();
+            if (phaseManager != null && phaseManager.CurrentPhase == PhaseType.Draw
+                && phaseManager.TryGetAssignment(Runner.LocalPlayer, out var assignment))
             {
-                albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, hash, (ushort)_localStrokeCount);
+                chainLink = assignment.ChainLinkIndex;
+                originSlot = assignment.AlbumOriginSlotIndex;
+                albumStore?.Rpc_SubmitDrawing(originSlot, hash, (ushort)_localStrokeCount);
             }
-
+            byte[] strokeData = DrawingDataConverter.PointsToByteArray(_localPoints);
+            Rpc_ReceiveStrokeData(strokeData, chainLink, originSlot);
             _localPoints.Clear();
         }
 
@@ -189,7 +193,7 @@ namespace InkEcho.Network.Players
         /// Giảm bandwidth so với gửi từng point riêng lẻ (80% compression)
         /// </summary>
         [Rpc(RpcSources.All, RpcTargets.All)]
-        public void Rpc_ReceiveStrokeData(byte[] encodedStrokeData, RpcInfo info = default)
+        public void Rpc_ReceiveStrokeData(byte[] encodedStrokeData, byte chainLink, byte originSlot, RpcInfo info = default)
         {
             var playerId = info.Source.PlayerId;
 
@@ -236,9 +240,8 @@ namespace InkEcho.Network.Players
             lr.SetPositions(pointList.ToArray());
 
             // Debug info
-            float compressionPercent = (1 - (float)encodedStrokeData.Length / (points.Count * 12)) * 100;
-            Debug.Log($"[DrawingNetwork] Received stroke from player {playerId}: {points.Count} points, " +
-                      $"data size: {encodedStrokeData.Length} bytes ({compressionPercent:F1}% compression)");
+            if (chainLink != 0xFF)
+                DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
         }
 
         private Color PlayerColorFor(int playerId)

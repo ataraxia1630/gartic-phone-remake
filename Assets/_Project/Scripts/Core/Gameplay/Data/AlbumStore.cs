@@ -1,6 +1,7 @@
 ﻿using Fusion;
-using InkEcho.Network.Players;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
+using InkEcho.Network.Players;
 
 namespace InkEcho.Network.Data
 {
@@ -38,6 +39,7 @@ namespace InkEcho.Network.Data
                     Entries.Set(idx, AlbumEntry.Empty(link, slot, PlayerRef.None));
                 }
             }
+            DrawingStrokeStore.ClearStrokes();
         }
 
         private int IndexOf(int chainLink, int originSlot) => chainLink * PlayerCount + originSlot;

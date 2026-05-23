@@ -16,6 +16,20 @@ namespace InkEcho.Network.Phases.Strategies
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.ResetSubmittedFlags();
             Debug.Log("[Phase] FinalGuess entered");
+
+            // NEW: Show previous drawing
+            if (manager.RoundIndex > 0)
+                ShowPreviousContent(manager);
+        }
+
+        private void ShowPreviousContent(PhaseManager manager)
+        {
+            var uiHelper = Object.FindObjectOfType<InkEcho.UI.PhaseUIHelper>();
+            if (uiHelper != null)
+            {
+                uiHelper.ShowDrawing(manager.RoundIndex - 1, manager.RevealAlbumIndex);
+                Debug.Log($"[FinalGuessPhase] Showing drawing from round {manager.RoundIndex - 1}");
+            }
         }
 
         public override void Tick(PhaseManager manager)
