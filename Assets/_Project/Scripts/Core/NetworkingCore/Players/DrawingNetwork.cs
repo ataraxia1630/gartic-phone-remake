@@ -23,6 +23,8 @@ namespace InkEcho.Network.Players
         private int _localStrokeCount;
         private Vector3 _lastSentPoint;
         private bool _hasLastSentPoint;
+        private PhaseAssignment _lastKnownDrawAssignment;
+        private bool _hasLastKnownDrawAssignment;
 
         public override void Spawned()
         {
@@ -63,6 +65,8 @@ namespace InkEcho.Network.Players
 
         public void EndLocalStroke()
         {
+            var _dbgPm = ServiceLocator.Get<PhaseManager>();
+            Debug.Log($"[DrawingNetwork] EndLocalStroke called | points={_localPoints.Count} | phase={_dbgPm?.CurrentPhase} | hasCached={_hasLastKnownDrawAssignment}");
             if (_localPoints.Count == 0) { _localPoints.Clear(); return; }
 
             _localStrokeCount++;
@@ -87,12 +91,21 @@ namespace InkEcho.Network.Players
             byte chainLink = 0xFF, originSlot = 0xFF;
             var phaseManager = ServiceLocator.Get<PhaseManager>();
             var albumStore = ServiceLocator.Get<AlbumStore>();
-            if (phaseManager != null && phaseManager.CurrentPhase == PhaseType.Draw
-                && phaseManager.TryGetAssignment(Runner.LocalPlayer, out var assignment))
+            PhaseAssignment assignment = default;
+            bool inDraw = phaseManager != null && phaseManager.CurrentPhase == PhaseType.Draw
+                && phaseManager.TryGetAssignment(Runner.LocalPlayer, out assignment);
+            if (inDraw)
             {
                 chainLink = assignment.ChainLinkIndex;
                 originSlot = assignment.AlbumOriginSlotIndex;
                 albumStore?.Rpc_SubmitDrawing(originSlot, hash, (ushort)_localStrokeCount);
+            }
+            else if (_hasLastKnownDrawAssignment)
+            {
+                // Phase already transitioned before flush — use cached assignment so stroke is stored
+                chainLink = _lastKnownDrawAssignment.ChainLinkIndex;
+                originSlot = _lastKnownDrawAssignment.AlbumOriginSlotIndex;
+                Debug.Log($"[DrawingNetwork] EndLocalStroke using cached assignment: chainLink={chainLink}, originSlot={originSlot}");
             }
             byte[] strokeData = DrawingDataConverter.PointsToByteArray(_localPoints);
             Rpc_ReceiveStrokeData(strokeData, chainLink, originSlot);
@@ -111,6 +124,12 @@ namespace InkEcho.Network.Players
                 }
 
                 return;
+            }
+            // Cache current assignment so EndLocalStroke can use it even after phase transitions
+            if (phaseManager.TryGetAssignment(Runner.LocalPlayer, out var cachedAssignment))
+            {
+                _lastKnownDrawAssignment = cachedAssignment;
+                _hasLastKnownDrawAssignment = true;
             }
 
             // Input reading is local - not tied to network authority
@@ -242,6 +261,21 @@ namespace InkEcho.Network.Players
             // Debug info
             if (chainLink != 0xFF)
                 DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
+        }
+        public void SubmitUVStroke(List<Vector3> uvPoints, byte chainLink, byte originSlot)
+        {
+            if (uvPoints == null || uvPoints.Count == 0) return;
+            var data = DrawingDataConverter.PointsToByteArray(uvPoints);
+            Rpc_ReceiveUVStroke(data, chainLink, originSlot);
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void Rpc_ReceiveUVStroke(byte[] data, byte chainLink, byte originSlot, RpcInfo info = default)
+        {
+            var points = DrawingDataConverter.ByteArrayToPoints(data);
+            if (points.Count == 0) return;
+            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
+            Debug.Log($"[DrawingNetwork] UV stroke received: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}");
         }
 
         private Color PlayerColorFor(int playerId)

@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using InkEcho.Gameplay.Data;
+using InkEcho.Network.Core;
+using InkEcho.Network.Phases;
+using InkEcho.Network.Players;
 
 public class DrawingManager : MonoBehaviour
 {
@@ -30,6 +34,9 @@ public class DrawingManager : MonoBehaviour
     private Vector2? lastPos = null;
     private bool isDrawing = false;
     private bool isClearing = false;
+
+    private readonly List<Vector3> _currentStrokeUV = new List<Vector3>();
+    private bool _wasInDrawPhase = false;
 
     IEnumerator Start()
     {
@@ -64,8 +71,14 @@ public class DrawingManager : MonoBehaviour
 
     void Update()
     {
-        if (texture == null) return; // Thêm guard này
+        if (texture == null) return;
 
+        // Detect Draw phase transition to flush any in-progress stroke
+        var pm = ServiceLocator.Get<PhaseManager>();
+        bool nowInDraw = pm != null && pm.CurrentPhase == PhaseType.Draw;
+        if (_wasInDrawPhase && !nowInDraw)
+            FlushCurrentStroke();
+        _wasInDrawPhase = nowInDraw;
         // Chỉ xử lý vẽ khi chuột nằm trong DrawingArea
         if (!IsMouseOverDrawingArea()) return;
 
@@ -73,11 +86,12 @@ public class DrawingManager : MonoBehaviour
         {
             lastPos = null;
             isDrawing = false;
+            _currentStrokeUV.Clear();
         }
 
         if (Input.GetMouseButton(0))
         {
-            if (isClearing) return; 
+            if (isClearing) return;
             if (!isDrawing)
             {
                 undoStack.Push(texture.GetPixels());
@@ -91,9 +105,33 @@ public class DrawingManager : MonoBehaviour
         {
             lastPos = null;
             isDrawing = false;
+            FlushCurrentStroke();
         }
     }
-
+    private void FlushCurrentStroke()
+    {
+        if (_currentStrokeUV.Count == 0) return;
+        var pm = ServiceLocator.Get<PhaseManager>();
+        var runner = NetworkBootstrap.Instance?.Runner;
+        if (pm == null || runner == null || pm.CurrentPhase != PhaseType.Draw)
+        {
+            _currentStrokeUV.Clear();
+            return;
+        }
+        if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment))
+        {
+            _currentStrokeUV.Clear();
+            return;
+        }
+        var allNetworks = Object.FindObjectsOfType<DrawingNetwork>();
+        foreach (var dn in allNetworks)
+        {
+            if (!dn.HasInputAuthority) continue;
+            dn.SubmitUVStroke(new List<Vector3>(_currentStrokeUV), assignment.ChainLinkIndex, assignment.AlbumOriginSlotIndex);
+            break;
+        }
+        _currentStrokeUV.Clear();
+    }
     bool IsMouseOverDrawingArea()
     {
         return RectTransformUtility.RectangleContainsScreenPoint(
@@ -137,8 +175,10 @@ public class DrawingManager : MonoBehaviour
         }
 
         lastPos = texPos;
+        // Collect normalized UV point for network sync
+        _currentStrokeUV.Add(new Vector3(texPos.x / textureWidth, texPos.y / textureHeight, 0f));
         texture.Apply();
-        drawingCanvas.texture = texture; // Cập nhật texture sau mỗi lần vẽ
+        drawingCanvas.texture = texture;
     }
 
     void DrawCircle(int cx, int cy, Color color)
