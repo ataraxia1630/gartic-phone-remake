@@ -39,22 +39,29 @@ namespace InkEcho.Hoai.UI
         }
         private void TryRenderDrawing()
         {
-            if (replayRenderer == null) return;
+            if (replayRenderer == null) { Debug.LogWarning("[Observe] replayRenderer is NULL"); return; }
 
             var pm = ServiceLocator.Get<PhaseManager>();
             var runner = NetworkBootstrap.Instance?.Runner;
-            if (pm == null || runner == null) return;
+            if (pm == null || runner == null) { Debug.LogWarning("[Observe] PhaseManager or Runner is NULL"); return; }
 
-            if (!pm.TryGetNextAssignment(runner.LocalPlayer, out var nextAssignment)) return;
+            if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment))
+            {
+                Debug.LogWarning($"[Observe] TryGetAssignment failed. RoundIndex={pm.RoundIndex}, TotalRounds={pm.TotalRounds}");
+                return;
+            }
+            int prevChainLink = assignment.ChainLinkIndex - 1;
+            Debug.Log($"[Observe] assignment: ChainLink={assignment.ChainLinkIndex}, OriginSlot={assignment.AlbumOriginSlotIndex} | Looking for strokes at chainLink={prevChainLink}"); if (prevChainLink < 0) { Debug.LogWarning("[Observe] prevChainLink < 0, nothing to show"); return; }
 
-            int prevChainLink = nextAssignment.ChainLinkIndex - 1;
-            if (prevChainLink < 0) return;
+            var strokes = DrawingStrokeStore.GetStrokes(prevChainLink, assignment.AlbumOriginSlotIndex);
+            Debug.Log($"[Observe] GetStrokes({prevChainLink}, {assignment.AlbumOriginSlotIndex}) => {(strokes == null ? "null" : strokes.Count + " strokes")}");
 
-            var strokes = DrawingStrokeStore.GetStrokes(prevChainLink, nextAssignment.AlbumOriginSlotIndex);
             if (strokes == null || strokes.Count == 0) return;
 
             replayRenderer.RenderStrokes(strokes);
             _rendered = true;
+            Debug.Log("[Observe] Drawing rendered successfully");
+
         }
         private void Refresh()
         {

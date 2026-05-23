@@ -22,6 +22,9 @@ namespace InkEcho.Gameplay.Data
                 strokeList = new List<List<Vector3>>();
                 _strokes[key] = strokeList;
             }
+            strokeList.Add(new List<Vector3>(points));
+            Debug.Log($"[DrawingStrokeStore] Stored stroke at chainLink={chainLink}, originSlot={originSlot} | total strokes={strokeList.Count}, points={points.Count}");
+
         }
         public static IReadOnlyList<List<Vector3>> GetStrokes(int chainLink, int originSlot)
         {

@@ -55,7 +55,7 @@ namespace InkEcho.Network.Phases.Strategies
 
             if (allDone || manager.PhaseTimer.Expired(manager.Runner))
             {
-                manager.TransitionToObserve();
+                manager.AdvancePhase();
             }
         }
     }

@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 785154137}
   - component: {fileID: 785154139}
   - component: {fileID: 785154138}
+  - component: {fileID: 785154140}
   m_Layer: 5
   m_Name: Panel
   m_TagString: Untagged
@@ -196,6 +197,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 785154136}
   m_CullTransparentMesh: 1
+--- !u!114 &785154140
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 785154136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94477fb703e01ff4dae979e9431fd523, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InkEcho.Hoai.UI.ObserveOverlayPanel
+  countdownLabel: {fileID: 0}
+  hintLabel: {fileID: 0}
+  hintFormat: "B\u1EA1n s\u1EBD v\u1EBD ti\u1EBFp chain {0} sau..."
+  replayRenderer: {fileID: 0}
 --- !u!1 &797546368
 GameObject:
   m_ObjectHideFlags: 0
