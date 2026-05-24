@@ -4,7 +4,6 @@ using Fusion;
 using InkEcho.Network.Core;
 using InkEcho.Network.GameModes;
 using InkEcho.Network.Players;
-using InkEcho.Network.Data;
 using UnityEngine;
 
 namespace InkEcho.Network.Phases

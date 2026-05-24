@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Fusion;
+using Fusion.Sockets;
 using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
 using InkEcho.Network.Phases;
+using InkEcho.Network.Data;
 using InkEcho.Network.Players;
 
 public class DrawingManager : MonoBehaviour
@@ -37,6 +40,8 @@ public class DrawingManager : MonoBehaviour
 
     private readonly List<Vector3> _currentStrokeUV = new List<Vector3>();
     private bool _wasInDrawPhase = false;
+    private static int _reliableKeyCounter = 0;
+    private const byte DrawingPacketMagic = 0xDD;
 
     IEnumerator Start()
     {
@@ -110,9 +115,11 @@ public class DrawingManager : MonoBehaviour
     }
     private void FlushCurrentStroke()
     {
+        Debug.Log($"[DrawingManager] FlushCurrentStroke: uvPoints={_currentStrokeUV.Count}");
         if (_currentStrokeUV.Count == 0) return;
         var pm = ServiceLocator.Get<PhaseManager>();
         var runner = NetworkBootstrap.Instance?.Runner;
+        Debug.Log($"[DrawingManager] pm={pm != null}, runner={runner != null}, phase={pm?.CurrentPhase}");
         if (pm == null || runner == null || pm.CurrentPhase != PhaseType.Draw)
         {
             _currentStrokeUV.Clear();
@@ -120,16 +127,27 @@ public class DrawingManager : MonoBehaviour
         }
         if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment))
         {
+            Debug.LogWarning("[DrawingManager] TryGetAssignment failed");
             _currentStrokeUV.Clear();
             return;
         }
-        var allNetworks = Object.FindObjectsOfType<DrawingNetwork>();
-        foreach (var dn in allNetworks)
+        // Store locally immediately
+        DrawingStrokeStore.StoreStroke(assignment.ChainLinkIndex, assignment.AlbumOriginSlotIndex, new List<Vector3>(_currentStrokeUV));
+
+        // Send to all remote players via reliable data channel
+        var strokeBytes = DrawingDataConverter.PointsToByteArray(new List<Vector3>(_currentStrokeUV));
+        var packet = new byte[3 + strokeBytes.Length];
+        packet[0] = DrawingPacketMagic;
+        packet[1] = assignment.ChainLinkIndex;
+        packet[2] = assignment.AlbumOriginSlotIndex;
+        System.Array.Copy(strokeBytes, 0, packet, 3, strokeBytes.Length);
+        var key = ReliableKey.FromInts(_reliableKeyCounter++, 0, 0, 0);
+        foreach (var remotePlayer in runner.ActivePlayers)
         {
-            if (!dn.HasInputAuthority) continue;
-            dn.SubmitUVStroke(new List<Vector3>(_currentStrokeUV), assignment.ChainLinkIndex, assignment.AlbumOriginSlotIndex);
-            break;
+            if (remotePlayer == runner.LocalPlayer) continue;
+            runner.SendReliableDataToPlayer(remotePlayer, key, packet);
         }
+        Debug.Log($"[DrawingManager] Stroke stored locally + sent to remote players: chainLink={assignment.ChainLinkIndex}, originSlot={assignment.AlbumOriginSlotIndex}, points={_currentStrokeUV.Count}");
         _currentStrokeUV.Clear();
     }
     bool IsMouseOverDrawingArea()

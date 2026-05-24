@@ -1,12 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Fusion;
 using Fusion.Sockets;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Data;
 using InkEcho.Network.Phases;
 using InkEcho.Network.Players;
 using InkEcho.Network.StateMachine;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace InkEcho.Network.Core
@@ -116,7 +117,18 @@ namespace InkEcho.Network.Core
         }
         public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
         public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
-        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
+        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
+        {
+            if (data.Count < 3 || data.Array[data.Offset] != 0xDD) return;
+            byte chainLink = data.Array[data.Offset + 1];
+            byte originSlot = data.Array[data.Offset + 2];
+            var strokeBytes = new byte[data.Count - 3];
+            Array.Copy(data.Array, data.Offset + 3, strokeBytes, 0, strokeBytes.Length);
+            var points = DrawingDataConverter.ByteArrayToPoints(strokeBytes);
+            if (points.Count == 0) return;
+            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
+            Debug.Log($"[NetworkBootstrap] Drawing stroke received: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}");
+        }
         public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
         public void OnSceneLoadDone(NetworkRunner runner) => OnSceneLoadDoneEvent?.Invoke(runner);
         public void OnSceneLoadStart(NetworkRunner runner) => OnSceneLoadStartEvent?.Invoke(runner);
