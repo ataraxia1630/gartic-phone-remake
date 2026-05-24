@@ -13,15 +13,21 @@ namespace InkEcho.Hoai.UI
         [SerializeField] private TextMeshProUGUI countdownLabel;
         [SerializeField] private TextMeshProUGUI hintLabel;
         [SerializeField] private string hintFormat = "Bạn sẽ vẽ tiếp chain {0} sau...";
-        [SerializeField] private Image displayImage;
+        [SerializeField] private RawImage rawDisplayImage;  // preferred — assign in Inspector
+        [SerializeField] private Image displayImage;        // fallback if no RawImage
         private bool _rendered;
+        private bool _loggedOnce;
         private Texture2D _displayTexture;
 
         private void OnEnable()
         {
             _rendered = false;
+            _loggedOnce = false;
+            if (rawDisplayImage == null)
+                rawDisplayImage = GetComponentInChildren<RawImage>(true);
             if (displayImage == null)
                 displayImage = GetComponentInChildren<Image>(true);
+            Debug.Log($"[Observe] OnEnable: rawImage={(rawDisplayImage != null ? rawDisplayImage.gameObject.name : "NULL")}, image={(displayImage != null ? displayImage.gameObject.name : "NULL")}");
             Refresh();
         }
 
@@ -35,6 +41,8 @@ namespace InkEcho.Hoai.UI
         private void OnDisable()
         {
             _rendered = false;
+            _loggedOnce = false;
+            if (rawDisplayImage != null) rawDisplayImage.texture = null;
             if (displayImage != null) displayImage.sprite = null;
             if (_displayTexture != null) { Object.Destroy(_displayTexture); _displayTexture = null; }
         }
@@ -47,41 +55,57 @@ namespace InkEcho.Hoai.UI
 
             if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment))
             {
-                Debug.LogWarning($"[Observe] TryGetAssignment failed. RoundIndex={pm.RoundIndex}");
+                if (!_loggedOnce) Debug.LogWarning($"[Observe] TryGetAssignment failed. RoundIndex={pm.RoundIndex}, Phase={pm.CurrentPhase}");
+                _loggedOnce = true;
                 return;
             }
 
             int prevChainLink = assignment.ChainLinkIndex - 1;
-            if (prevChainLink < 0) return;
+            if (!_loggedOnce)
+                Debug.Log($"[Observe] Assignment: chainLink={assignment.ChainLinkIndex}, originSlot={assignment.AlbumOriginSlotIndex}, prevChainLink={prevChainLink}");
+
+            if (prevChainLink < 0)
+            {
+                _loggedOnce = true;
+                return;
+            }
 
             var strokes = DrawingStrokeStore.GetStrokes(prevChainLink, assignment.AlbumOriginSlotIndex);
-            Debug.Log($"[Observe] GetStrokes({prevChainLink}, {assignment.AlbumOriginSlotIndex}) => {strokes?.Count ?? 0} strokes");
+            if (!_loggedOnce)
+                Debug.Log($"[Observe] GetStrokes({prevChainLink}, {assignment.AlbumOriginSlotIndex}) => {strokes?.Count ?? 0} strokes");
+            _loggedOnce = true;
 
             if (strokes == null || strokes.Count == 0) return;
 
-            RenderStrokesToImage(strokes);
+            RenderStrokesToTexture(strokes);
             _rendered = true;
             Debug.Log("[Observe] Drawing rendered successfully");
         }
 
-        private void RenderStrokesToImage(IReadOnlyList<List<Vector3>> strokes)
+        private void RenderStrokesToTexture(IReadOnlyList<List<Vector3>> strokes)
         {
-            if (displayImage == null) { Debug.LogWarning("[Observe] displayImage is NULL"); return; }
+            RectTransform rt = rawDisplayImage != null
+                ? rawDisplayImage.rectTransform
+                : displayImage != null ? displayImage.rectTransform : null;
 
-            int w = Mathf.RoundToInt(displayImage.rectTransform.rect.width);
-            int h = Mathf.RoundToInt(displayImage.rectTransform.rect.height);
-            if (w <= 0 || h <= 0) { w = 600; h = 300; }
+            if (rt == null) { Debug.LogWarning("[Observe] No display component found"); return; }
+
+            int w = Mathf.RoundToInt(rt.rect.width);
+            int h = Mathf.RoundToInt(rt.rect.height);
+            Debug.Log($"[Observe] RenderStrokesToTexture: rect={w}x{h}, strokes={strokes.Count}");
+            if (w <= 0 || h <= 0) { w = 512; h = 512; }
 
             if (_displayTexture == null || _displayTexture.width != w || _displayTexture.height != h)
             {
                 if (_displayTexture != null) Object.Destroy(_displayTexture);
-                _displayTexture = new Texture2D(w, h);
+                _displayTexture = new Texture2D(w, h, TextureFormat.RGBA32, false);
             }
 
             var pixels = new Color[w * h];
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.white;
             _displayTexture.SetPixels(pixels);
 
+            int dotCount = 0;
             foreach (var stroke in strokes)
             {
                 for (int i = 0; i < stroke.Count; i++)
@@ -89,6 +113,7 @@ namespace InkEcho.Hoai.UI
                     int px = Mathf.RoundToInt(stroke[i].x * w);
                     int py = Mathf.RoundToInt(stroke[i].y * h);
                     DrawDot(px, py, 3);
+                    dotCount++;
                     if (i > 0)
                     {
                         int prevX = Mathf.RoundToInt(stroke[i - 1].x * w);
@@ -99,8 +124,22 @@ namespace InkEcho.Hoai.UI
             }
 
             _displayTexture.Apply();
-            var rect = new Rect(0, 0, w, h);
-            displayImage.sprite = Sprite.Create(_displayTexture, rect, new Vector2(0.5f, 0.5f));
+            Debug.Log($"[Observe] Texture drawn: {dotCount} dots total");
+
+            if (rawDisplayImage != null)
+            {
+                rawDisplayImage.texture = _displayTexture;
+                rawDisplayImage.color = Color.white;
+                rawDisplayImage.enabled = true;
+            }
+            else if (displayImage != null)
+            {
+                displayImage.type = Image.Type.Simple;
+                displayImage.color = Color.white;
+                displayImage.preserveAspect = false;
+                displayImage.enabled = true;
+                displayImage.sprite = Sprite.Create(_displayTexture, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+            }
         }
 
         private void DrawDot(int cx, int cy, int radius)

@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using Fusion;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
+using InkEcho.Network.Data;
+using UnityEngine;
 
 namespace InkEcho.Network.Players
 {
@@ -153,6 +156,14 @@ namespace InkEcho.Network.Players
         public bool TryGetSlot(PlayerRef player, out PlayerSlotData slot)
         {
             return Slots.TryGet(player, out slot);
+        }
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void Rpc_SyncDrawingStroke(byte[] data, byte chainLink, byte originSlot, RpcInfo info = default)
+        {
+            var points = DrawingDataConverter.ByteArrayToPoints(data);
+            if (points.Count == 0) return;
+            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
+            Debug.Log($"[PlayerRegistry] Drawing stroke synced: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}, from={info.Source}");
         }
     }
 }

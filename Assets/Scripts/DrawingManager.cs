@@ -131,24 +131,16 @@ public class DrawingManager : MonoBehaviour
             _currentStrokeUV.Clear();
             return;
         }
-        // Store locally immediately
-        DrawingStrokeStore.StoreStroke(assignment.ChainLinkIndex, assignment.AlbumOriginSlotIndex, new List<Vector3>(_currentStrokeUV));
-
-        // Send to all remote players via reliable data channel
-        var strokeBytes = DrawingDataConverter.PointsToByteArray(new List<Vector3>(_currentStrokeUV));
-        var packet = new byte[3 + strokeBytes.Length];
-        packet[0] = DrawingPacketMagic;
-        packet[1] = assignment.ChainLinkIndex;
-        packet[2] = assignment.AlbumOriginSlotIndex;
-        System.Array.Copy(strokeBytes, 0, packet, 3, strokeBytes.Length);
-        var key = ReliableKey.FromInts(_reliableKeyCounter++, 0, 0, 0);
-        foreach (var remotePlayer in runner.ActivePlayers)
+        var registry = ServiceLocator.Get<PlayerRegistry>();
+        if (registry == null)
         {
-            if (remotePlayer == runner.LocalPlayer) continue;
-            runner.SendReliableDataToPlayer(remotePlayer, key, packet);
+            Debug.LogWarning("[DrawingManager] PlayerRegistry not found, cannot sync stroke");
+            _currentStrokeUV.Clear();
+            return;
         }
-        Debug.Log($"[DrawingManager] Stroke stored locally + sent to remote players: chainLink={assignment.ChainLinkIndex}, originSlot={assignment.AlbumOriginSlotIndex}, points={_currentStrokeUV.Count}");
-        _currentStrokeUV.Clear();
+        var strokeBytes = DrawingDataConverter.PointsToByteArray(new List<Vector3>(_currentStrokeUV));
+        registry.Rpc_SyncDrawingStroke(strokeBytes, assignment.ChainLinkIndex, assignment.AlbumOriginSlotIndex);
+        Debug.Log($"[DrawingManager] Rpc_SyncDrawingStroke sent: chainLink={assignment.ChainLinkIndex}, originSlot={assignment.AlbumOriginSlotIndex}, points={_currentStrokeUV.Count}"); _currentStrokeUV.Clear();
     }
     bool IsMouseOverDrawingArea()
     {
