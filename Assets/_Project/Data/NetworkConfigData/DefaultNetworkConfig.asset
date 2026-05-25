@@ -19,7 +19,7 @@ MonoBehaviour:
   PromptPhaseDuration: 30
   DrawPhaseDuration: 60
   GuessPhaseDuration: 30
-  ObservePhaseDuration: 4
+  ObservePhaseDuration: 20
   FinalGuessPhaseDuration: 30
   RevealPerAlbumDuration: 8
   ModeConfigs:

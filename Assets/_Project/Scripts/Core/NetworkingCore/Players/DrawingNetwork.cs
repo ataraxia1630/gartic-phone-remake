@@ -260,8 +260,19 @@ namespace InkEcho.Network.Players
 
             // Debug info
             if (chainLink != 0xFF)
-                DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
+                DrawingStrokeStore.StoreStroke(chainLink, originSlot, WorldToUV(points), PlayerColorFor(playerId));
         }
+        private List<Vector3> WorldToUV(List<Vector3> worldPoints)
+        {
+            if (drawingArea == null) return worldPoints;
+            var b = drawingArea.bounds;
+            if (b.size.x == 0f || b.size.y == 0f) return worldPoints;
+            var uv = new List<Vector3>(worldPoints.Count);
+            foreach (var p in worldPoints)
+                uv.Add(new Vector3((p.x - b.min.x) / b.size.x, (p.y - b.min.y) / b.size.y, 0f));
+            return uv;
+        }
+
         public void SubmitUVStroke(List<Vector3> uvPoints, byte chainLink, byte originSlot)
         {
             if (uvPoints == null || uvPoints.Count == 0) return;

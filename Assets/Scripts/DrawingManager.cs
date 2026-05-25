@@ -166,7 +166,8 @@ public class DrawingManager : MonoBehaviour
         }
         var strokeBytes = DrawingDataConverter.PointsToByteArray(new List<Vector3>(_currentStrokeUV));
         registry.Rpc_SyncDrawingStroke(strokeBytes, chainLink, originSlot);
-        Debug.Log($"[DrawingManager] Rpc_SyncDrawingStroke sent: chainLink={chainLink}, originSlot={originSlot}, points={_currentStrokeUV.Count}"); _currentStrokeUV.Clear();
+        Debug.Log($"[DrawingManager] Rpc_SyncDrawingStroke sent: chainLink={chainLink}, originSlot={originSlot}, points={_currentStrokeUV.Count}"); 
+        _currentStrokeUV.Clear();
     }
     bool IsMouseOverDrawingArea()
     {

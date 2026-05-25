@@ -203,10 +203,16 @@ namespace InkEcho.Network.Phases
 
         public bool TryGetNextAssignment(PlayerRef currentWorker, out PhaseAssignment nextAssignment)
         {
-            if (_mode == null || RoundIndex + 1 >= TotalRounds)
+            // NEW
+            if (RoundIndex + 1 >= TotalRounds)
             {
                 nextAssignment = default;
                 return false;
+            }
+            if (_mode == null)
+            {
+                if (TotalRounds == 0) { nextAssignment = default; return false; }
+                _mode = GameModeFactory.Create(ActiveMode);
             }
             var nextPhase = (byte)(RoundIndex + 1);
             var orderedPlayers = ResolvePlayOrder();
@@ -274,8 +280,8 @@ namespace InkEcho.Network.Phases
         {
             if (_mode == null)
             {
-                _assignments = null;
-                return;
+                if (TotalRounds == 0) { _assignments = null; return; }
+                _mode = GameModeFactory.Create(ActiveMode);
             }
 
             if (CurrentPhase == PhaseType.None || CurrentPhase == PhaseType.Reveal)

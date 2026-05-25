@@ -10,6 +10,7 @@ namespace InkEcho.Gameplay.UI
     public class ObserveDrawingDisplay : MonoBehaviour
     {
         [SerializeField] private RawImage displayTarget;
+        [SerializeField] private float drawCanvasAspect = 16f / 9f;
 
         private Texture2D _tex;
         private bool _rendered;
@@ -48,40 +49,65 @@ namespace InkEcho.Gameplay.UI
             var strokes = DrawingStrokeStore.GetStrokes(prevLink, assignment.AlbumOriginSlotIndex);
             if (strokes == null || strokes.Count == 0) return;
 
-            RenderToTexture(strokes);
+            var colors = DrawingStrokeStore.GetStrokeColors(prevLink, assignment.AlbumOriginSlotIndex);
+            RenderToTexture(strokes, colors);
             _rendered = true;
         }
 
-        private void RenderToTexture(IReadOnlyList<List<Vector3>> strokes)
+        private void RenderToTexture(IReadOnlyList<List<Vector3>> strokes, IReadOnlyList<Color> strokeColors)
         {
             if (displayTarget == null) return;
 
             int w = Mathf.RoundToInt(displayTarget.rectTransform.rect.width);
             int h = Mathf.RoundToInt(displayTarget.rectTransform.rect.height);
-            if (w <= 0 || h <= 0) { w = 512; h = 512; }
+            int texW = Mathf.RoundToInt(displayTarget.rectTransform.rect.width);
+            int texH = Mathf.RoundToInt(displayTarget.rectTransform.rect.height);
+            if (texW <= 0 || texH <= 0) { texW = 512; texH = 512; }
 
-            if (_tex == null || _tex.width != w || _tex.height != h)
+            if (_tex == null || _tex.width != texW || _tex.height != texH)
             {
                 if (_tex != null) Destroy(_tex);
-                _tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                _tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
             }
 
-            var pixels = new Color[w * h];
+            var pixels = new Color[texW * texH];
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.white;
             _tex.SetPixels(pixels);
-
-            foreach (var stroke in strokes)
+            // Letterbox/pillarbox: fit drawing canvas aspect into the texture without distortion.
+            // Strokes are stored as UV [0,1] relative to drawCanvasAspect (e.g. 16:9).
+            float texAspect = (float)texW / texH;
+            int drawW, drawH, offsetX, offsetY;
+            if (drawCanvasAspect > texAspect)
             {
+                // Drawing wider than display → fit width, add bars top/bottom
+                drawW = texW;
+                drawH = Mathf.RoundToInt(texW / drawCanvasAspect);
+                offsetX = 0;
+                offsetY = (texH - drawH) / 2;
+            }
+            else
+            {
+                // Drawing taller than display → fit height, add bars left/right
+                drawH = texH;
+                drawW = Mathf.RoundToInt(texH * drawCanvasAspect);
+                offsetX = (texW - drawW) / 2;
+                offsetY = 0;
+            }
+
+            for (int si = 0; si < strokes.Count; si++)
+            {
+                var stroke = strokes[si];
+                var color = si < strokeColors.Count ? strokeColors[si] : Color.black;
                 for (int i = 0; i < stroke.Count; i++)
                 {
-                    int px = Mathf.RoundToInt(stroke[i].x * w);
-                    int py = Mathf.RoundToInt(stroke[i].y * h);
-                    PaintDot(px, py, 3);
+                    int px = offsetX + Mathf.RoundToInt(stroke[i].x * drawW);
+                    int py = offsetY + Mathf.RoundToInt(stroke[i].y * drawH);
+                    PaintDot(px, py, 1, color);
                     if (i > 0)
                     {
-                        int x0 = Mathf.RoundToInt(stroke[i - 1].x * w);
-                        int y0 = Mathf.RoundToInt(stroke[i - 1].y * h);
-                        PaintSegment(x0, y0, px, py);
+                        int x0 = offsetX + Mathf.RoundToInt(stroke[i - 1].x * drawW);
+                        int y0 = offsetY + Mathf.RoundToInt(stroke[i - 1].y * drawH);
+                        PaintSegment(x0, y0, px, py, color);
                     }
                 }
             }
@@ -91,7 +117,7 @@ namespace InkEcho.Gameplay.UI
             displayTarget.color = Color.white;
         }
 
-        private void PaintDot(int cx, int cy, int r)
+        private void PaintDot(int cx, int cy, int r, Color color)
         {
             for (int dx = -r; dx <= r; dx++)
                 for (int dy = -r; dy <= r; dy++)
@@ -99,17 +125,17 @@ namespace InkEcho.Gameplay.UI
                     if (dx * dx + dy * dy > r * r) continue;
                     int px = cx + dx, py = cy + dy;
                     if (px >= 0 && px < _tex.width && py >= 0 && py < _tex.height)
-                        _tex.SetPixel(px, py, Color.black);
+                        _tex.SetPixel(px, py, color);
                 }
         }
 
-        private void PaintSegment(int x0, int y0, int x1, int y1)
+        private void PaintSegment(int x0, int y0, int x1, int y1, Color color)
         {
             int steps = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(new Vector2(x0, y0), new Vector2(x1, y1))));
             for (int s = 0; s <= steps; s++)
             {
                 float t = (float)s / steps;
-                PaintDot(Mathf.RoundToInt(Mathf.Lerp(x0, x1, t)), Mathf.RoundToInt(Mathf.Lerp(y0, y1, t)), 3);
+                PaintDot(Mathf.RoundToInt(Mathf.Lerp(x0, x1, t)), Mathf.RoundToInt(Mathf.Lerp(y0, y1, t)), 1, color);
             }
         }
     }

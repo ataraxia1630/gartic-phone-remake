@@ -163,7 +163,7 @@ namespace InkEcho.Network.Players
             var points = DrawingDataConverter.ByteArrayToPoints(data);
             if (points.Count == 0) return;
             DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
-            Debug.Log($"[PlayerRegistry] Drawing stroke synced: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}, from={info.Source}");
+            Debug.Log($"[PlayerRegistry] Stroke synced: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}");
         }
     }
 }
