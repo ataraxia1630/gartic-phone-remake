@@ -40,8 +40,9 @@ public class DrawingManager : MonoBehaviour
 
     private readonly List<Vector3> _currentStrokeUV = new List<Vector3>();
     private bool _wasInDrawPhase = false;
-    private static int _reliableKeyCounter = 0;
-    private const byte DrawingPacketMagic = 0xDD;
+    private byte _cachedChainLink;
+    private byte _cachedOriginSlot;
+    private bool _hasCachedAssignment;
 
     IEnumerator Start()
     {
@@ -81,8 +82,25 @@ public class DrawingManager : MonoBehaviour
         // Detect Draw phase transition to flush any in-progress stroke
         var pm = ServiceLocator.Get<PhaseManager>();
         bool nowInDraw = pm != null && pm.CurrentPhase == PhaseType.Draw;
+        if (!_wasInDrawPhase && nowInDraw)
+        {
+            // Cache assignment immediately on entering Draw phase so FlushCurrentStroke
+            // can use the correct chainLink/originSlot even after the phase has changed.
+            var runner2 = NetworkBootstrap.Instance?.Runner;
+            if (runner2 != null && pm.TryGetAssignment(runner2.LocalPlayer, out var a))
+            {
+                _cachedChainLink = a.ChainLinkIndex;
+                _cachedOriginSlot = a.AlbumOriginSlotIndex;
+                _hasCachedAssignment = true;
+                Debug.Log($"[DrawingManager] Cached Draw assignment: chainLink={_cachedChainLink}, originSlot={_cachedOriginSlot}");
+            }
+        }
+
         if (_wasInDrawPhase && !nowInDraw)
+        {
             FlushCurrentStroke();
+            _hasCachedAssignment = false;
+        }
         _wasInDrawPhase = nowInDraw;
         // Chỉ xử lý vẽ khi chuột nằm trong DrawingArea
         if (!IsMouseOverDrawingArea()) return;
@@ -117,19 +135,27 @@ public class DrawingManager : MonoBehaviour
     {
         Debug.Log($"[DrawingManager] FlushCurrentStroke: uvPoints={_currentStrokeUV.Count}");
         if (_currentStrokeUV.Count == 0) return;
-        var pm = ServiceLocator.Get<PhaseManager>();
-        var runner = NetworkBootstrap.Instance?.Runner;
-        Debug.Log($"[DrawingManager] pm={pm != null}, runner={runner != null}, phase={pm?.CurrentPhase}");
-        if (pm == null || runner == null || pm.CurrentPhase != PhaseType.Draw)
+        byte chainLink = _cachedChainLink;
+        byte originSlot = _cachedOriginSlot;
+
+        if (!_hasCachedAssignment)
         {
-            _currentStrokeUV.Clear();
-            return;
-        }
-        if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment))
-        {
-            Debug.LogWarning("[DrawingManager] TryGetAssignment failed");
-            _currentStrokeUV.Clear();
-            return;
+            var pm = ServiceLocator.Get<PhaseManager>();
+            var runner = NetworkBootstrap.Instance?.Runner;
+            if (pm == null || runner == null || pm.CurrentPhase != PhaseType.Draw)
+            {
+                Debug.LogWarning("[DrawingManager] FlushCurrentStroke: no cached assignment and not in Draw phase, discarding");
+                _currentStrokeUV.Clear();
+                return;
+            }
+            if (!pm.TryGetAssignment(runner.LocalPlayer, out var a))
+            {
+                Debug.LogWarning("[DrawingManager] TryGetAssignment failed");
+                _currentStrokeUV.Clear();
+                return;
+            }
+            chainLink = a.ChainLinkIndex;
+            originSlot = a.AlbumOriginSlotIndex;
         }
         var registry = ServiceLocator.Get<PlayerRegistry>();
         if (registry == null)
@@ -139,8 +165,8 @@ public class DrawingManager : MonoBehaviour
             return;
         }
         var strokeBytes = DrawingDataConverter.PointsToByteArray(new List<Vector3>(_currentStrokeUV));
-        registry.Rpc_SyncDrawingStroke(strokeBytes, assignment.ChainLinkIndex, assignment.AlbumOriginSlotIndex);
-        Debug.Log($"[DrawingManager] Rpc_SyncDrawingStroke sent: chainLink={assignment.ChainLinkIndex}, originSlot={assignment.AlbumOriginSlotIndex}, points={_currentStrokeUV.Count}"); _currentStrokeUV.Clear();
+        registry.Rpc_SyncDrawingStroke(strokeBytes, chainLink, originSlot);
+        Debug.Log($"[DrawingManager] Rpc_SyncDrawingStroke sent: chainLink={chainLink}, originSlot={originSlot}, points={_currentStrokeUV.Count}"); _currentStrokeUV.Clear();
     }
     bool IsMouseOverDrawingArea()
     {
