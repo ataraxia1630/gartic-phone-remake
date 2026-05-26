@@ -158,11 +158,13 @@ namespace InkEcho.Network.Players
             return Slots.TryGet(player, out slot);
         }
         [Rpc(RpcSources.All, RpcTargets.All)]
-        public void Rpc_SyncDrawingStroke(byte[] data, byte chainLink, byte originSlot, RpcInfo info = default)
+        public void Rpc_SyncDrawingStroke(byte[] data, byte chainLink, byte originSlot,
+    byte colorR, byte colorG, byte colorB, RpcInfo info = default)
         {
-            var points = DrawingDataConverter.ByteArrayToPoints(data);
+            var points = DrawingDataConverter.ByteArrayToViewportPoints(data);
             if (points.Count == 0) return;
-            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
+            var color = new Color(colorR / 255f, colorG / 255f, colorB / 255f);
+            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points, color);
             Debug.Log($"[PlayerRegistry] Stroke synced: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}");
         }
     }

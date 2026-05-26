@@ -107,8 +107,27 @@ namespace InkEcho.Network.Players
                 originSlot = _lastKnownDrawAssignment.AlbumOriginSlotIndex;
                 Debug.Log($"[DrawingNetwork] EndLocalStroke using cached assignment: chainLink={chainLink}, originSlot={originSlot}");
             }
+            // Send world-space stroke for real-time LineRenderer rendering
             byte[] strokeData = DrawingDataConverter.PointsToByteArray(_localPoints);
             Rpc_ReceiveStrokeData(strokeData, chainLink, originSlot);
+
+            // Send viewport UV for observe-phase storage.
+            // Computed here on the local machine while Camera.main is available.
+            if (chainLink != 0xFF)
+            {
+                var cam = Camera.main;
+                if (cam != null)
+                {
+                    var vpPoints = new List<Vector3>(_localPoints.Count);
+                    foreach (var p in _localPoints)
+                    {
+                        var vp = cam.WorldToViewportPoint(p);
+                        vpPoints.Add(new Vector3(vp.x, vp.y, 0f));
+                    }
+                    Rpc_StoreObserveStroke(DrawingDataConverter.ViewportPointsToByteArray(vpPoints), chainLink, originSlot);
+                }
+            }
+
             _localPoints.Clear();
         }
 
@@ -257,27 +276,23 @@ namespace InkEcho.Network.Players
             // Cập nhật LineRenderer
             lr.positionCount = pointList.Count;
             lr.SetPositions(pointList.ToArray());
-
-            // Debug info
-            if (chainLink != 0xFF)
-                DrawingStrokeStore.StoreStroke(chainLink, originSlot, WorldToUV(points), PlayerColorFor(playerId));
         }
-        private List<Vector3> WorldToUV(List<Vector3> worldPoints)
+
+        // Stores viewport UV stroke in DrawingStrokeStore for observe-phase replay.
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void Rpc_StoreObserveStroke(byte[] vpData, byte chainLink, byte originSlot, RpcInfo info = default)
         {
-            if (drawingArea == null) return worldPoints;
-            var b = drawingArea.bounds;
-            if (b.size.x == 0f || b.size.y == 0f) return worldPoints;
-            var uv = new List<Vector3>(worldPoints.Count);
-            foreach (var p in worldPoints)
-                uv.Add(new Vector3((p.x - b.min.x) / b.size.x, (p.y - b.min.y) / b.size.y, 0f));
-            return uv;
+            var points = DrawingDataConverter.ByteArrayToViewportPoints(vpData);
+            if (points.Count == 0) return;
+            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points, PlayerColorFor(info.Source.PlayerId));
+            Debug.Log($"[DrawingNetwork] Stored observe stroke: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}, from={info.Source}");
         }
 
         public void SubmitUVStroke(List<Vector3> uvPoints, byte chainLink, byte originSlot)
         {
             if (uvPoints == null || uvPoints.Count == 0) return;
-            var data = DrawingDataConverter.PointsToByteArray(uvPoints);
-            Rpc_ReceiveUVStroke(data, chainLink, originSlot);
+            var data = DrawingDataConverter.ViewportPointsToByteArray(uvPoints);
+            Rpc_StoreObserveStroke(data, chainLink, originSlot);
         }
 
         [Rpc(RpcSources.All, RpcTargets.All)]

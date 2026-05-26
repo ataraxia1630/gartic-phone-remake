@@ -22,6 +22,7 @@ public class DrawingManager : MonoBehaviour
     public int textureHeight = 600;
     public float minDistance = 0.05f;  // Đơn vị pixel thay vì world unit
 
+    private static readonly ReliableKey DrawingTextureKey = ReliableKey.FromInts(0xDA, 0, 0, 0);
     // State
     private Texture2D texture;
     private Color[] clearColors;
@@ -99,6 +100,8 @@ public class DrawingManager : MonoBehaviour
         if (_wasInDrawPhase && !nowInDraw)
         {
             FlushCurrentStroke();
+            if (_hasCachedAssignment)
+                BroadcastTexture(_cachedChainLink, _cachedOriginSlot);
             _hasCachedAssignment = false;
         }
         _wasInDrawPhase = nowInDraw;
@@ -131,6 +134,37 @@ public class DrawingManager : MonoBehaviour
             FlushCurrentStroke();
         }
     }
+
+    private void BroadcastTexture(byte chainLink, byte originSlot)
+    {
+        if (texture == null) return;
+        var runner = NetworkBootstrap.Instance?.Runner;
+        var registry = ServiceLocator.Get<PlayerRegistry>();
+        if (runner == null || registry == null) return;
+
+        var png = texture.EncodeToPNG();
+
+        // Prefix with magic byte + chainLink + originSlot so receiver can identify it
+        var data = new byte[png.Length + 3];
+        data[0] = 0xDA; // magic: Drawing Artwork
+        data[1] = chainLink;
+        data[2] = originSlot;
+        System.Array.Copy(png, 0, data, 3, png.Length);
+
+        // Store locally (this player already has it — no need to receive)
+        DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
+
+        // Send to all other connected players
+        foreach (var pair in registry.Slots)
+        {
+            if (!pair.Value.IsConnected) continue;
+            if (pair.Key == runner.LocalPlayer) continue;
+            // Correct:
+            runner.SendReliableDataToPlayer(pair.Key, DrawingTextureKey, data);
+            Debug.Log($"[DrawingManager] Sent texture to {pair.Key}: chainLink={chainLink}, originSlot={originSlot}, size={png.Length} bytes");
+        }
+    }
+
     private void FlushCurrentStroke()
     {
         Debug.Log($"[DrawingManager] FlushCurrentStroke: uvPoints={_currentStrokeUV.Count}");
@@ -164,9 +198,11 @@ public class DrawingManager : MonoBehaviour
             _currentStrokeUV.Clear();
             return;
         }
-        var strokeBytes = DrawingDataConverter.PointsToByteArray(new List<Vector3>(_currentStrokeUV));
-        registry.Rpc_SyncDrawingStroke(strokeBytes, chainLink, originSlot);
-        Debug.Log($"[DrawingManager] Rpc_SyncDrawingStroke sent: chainLink={chainLink}, originSlot={originSlot}, points={_currentStrokeUV.Count}"); 
+        var strokeBytes = DrawingDataConverter.ViewportPointsToByteArray(new List<Vector3>(_currentStrokeUV));
+        registry.Rpc_SyncDrawingStroke(strokeBytes, chainLink, originSlot,
+            (byte)(currentColor.r * 255),
+            (byte)(currentColor.g * 255),
+            (byte)(currentColor.b * 255));
         _currentStrokeUV.Clear();
     }
     bool IsMouseOverDrawingArea()

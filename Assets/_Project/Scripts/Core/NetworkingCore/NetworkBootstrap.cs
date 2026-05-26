@@ -119,7 +119,17 @@ namespace InkEcho.Network.Core
         }
         public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
         public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
-        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
+        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
+        {
+            if (data.Count < 4) return;
+            if (data.Array[data.Offset] != 0xDA) return; // not a drawing texture
+
+            byte chainLink = data.Array[data.Offset + 1];
+            byte originSlot = data.Array[data.Offset + 2];
+            var png = new byte[data.Count - 3];
+            System.Array.Copy(data.Array, data.Offset + 3, png, 0, png.Length);
+            DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
+        }
         public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
         public void OnSceneLoadDone(NetworkRunner runner) => OnSceneLoadDoneEvent?.Invoke(runner);
         public void OnSceneLoadStart(NetworkRunner runner) => OnSceneLoadStartEvent?.Invoke(runner);
