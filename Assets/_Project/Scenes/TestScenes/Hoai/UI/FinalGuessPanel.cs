@@ -125,7 +125,7 @@ namespace InkEcho.Hoai.UI
             if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment)) return;
 
             string guess = (input != null && !string.IsNullOrWhiteSpace(input.text)) ? input.text.Trim() : "(empty)";
-            album.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guess);
+            album.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guess, assignment.PairRole);
 
             _submitted = true;
             if (input != null) input.interactable = false;

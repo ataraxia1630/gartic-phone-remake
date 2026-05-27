@@ -46,15 +46,19 @@ namespace InkEcho.Network.Data
         public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_128> prompt, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
+            var pm = ServiceLocator.Get<Phases.PhaseManager>();
+            if (pm == null || pm.CurrentPhase != Phases.PhaseType.Prompt) return;
             var player = info.Source;
-            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
-            var idx = IndexOf(round, originSlot);
+            if (!pm.TryGetAssignment(player, out var assignment)) return;
+            if (assignment.AlbumOriginSlotIndex != originSlot) return;
+
+            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
 
             string currentText = entry.Prompt.ToString();
             string newText = prompt.ToString();
 
-            if (roleIndex == 1) 
+            if (roleIndex == 1)
             {
                 entry.Prompt = new NetworkString<_128>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
             }
@@ -94,9 +98,13 @@ namespace InkEcho.Network.Data
         public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_64> guess, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
+            var pm = ServiceLocator.Get<Phases.PhaseManager>();
+            if (pm == null || pm.CurrentPhase != Phases.PhaseType.FinalGuess) return;
             var player = info.Source;
-            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
-            var idx = IndexOf(round, originSlot);
+            if (!pm.TryGetAssignment(player, out var assignment)) return;
+            if (assignment.AlbumOriginSlotIndex != originSlot) return;
+
+            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
 
             if (roleIndex == 0)

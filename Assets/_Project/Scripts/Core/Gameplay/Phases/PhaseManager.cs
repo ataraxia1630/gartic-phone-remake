@@ -15,6 +15,7 @@ namespace InkEcho.Network.Phases
         [Networked] public byte RoundIndex { get; set; }
         [Networked] public byte TotalRounds { get; set; }
         [Networked] public byte RevealAlbumIndex { get; set; }
+        [Networked] public byte RevealLinkIndex { get; set; }
         [Networked] public GameModeType ActiveMode { get; set; }
         [Networked] public NetworkBool IsGameFinished { get; set; }
         [Networked, Capacity(PlayerRegistry.MaxPlayers)]
@@ -60,6 +61,7 @@ namespace InkEcho.Network.Phases
             TotalRounds = (byte)_mode.CalculateTotalRounds(playerCount);
             RoundIndex = 0;
             RevealAlbumIndex = 0;
+            RevealLinkIndex = 0;
             IsGameFinished = false;
 
             // initialize album store
@@ -80,6 +82,7 @@ namespace InkEcho.Network.Phases
             RoundIndex = 0;
             TotalRounds = 0;
             RevealAlbumIndex = 0;
+            RevealLinkIndex = 0;
             IsGameFinished = false;
             PlayOrderCount = 0;
             _currentStrategy = null;
@@ -129,6 +132,41 @@ namespace InkEcho.Network.Phases
         {
             if (!HasStateAuthority) return;
             RevealAlbumIndex = index;
+        }
+
+        public void SetRevealLinkIndex(byte index)
+        {
+            if (!HasStateAuthority) return;
+            RevealLinkIndex = index;
+        }
+
+        // Host UI calls this to reveal the next link, or advance to the next album when all links are shown.
+        public void RevealNext()
+        {
+            if (!HasStateAuthority) return;
+            var album = ServiceLocator.Get<Data.AlbumStore>();
+            if (album == null) return;
+
+            byte totalLinks = album.LinksPerChain;
+            if (totalLinks == 0) return;
+
+            byte nextLink = (byte)(RevealLinkIndex + 1);
+            if (nextLink < totalLinks)
+            {
+                RevealLinkIndex = nextLink;
+                return;
+            }
+
+            byte nextAlbum = (byte)(RevealAlbumIndex + 1);
+            if (nextAlbum < album.PlayerCount)
+            {
+                RevealAlbumIndex = nextAlbum;
+                RevealLinkIndex = 0;
+            }
+            else
+            {
+                AdvancePhase();
+            }
         }
 
         public void AdvancePhase()

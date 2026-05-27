@@ -62,7 +62,7 @@ public class LocalSubmitController : MonoBehaviour
             case PhaseType.Prompt:
                 string promptText = promptInput != null && !string.IsNullOrWhiteSpace(promptInput.text)
                     ? promptInput.text.Trim() : "(empty)";
-                albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText);
+                albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText, assignment.PairRole);
                 break;
 
             case PhaseType.Draw:
@@ -72,7 +72,7 @@ public class LocalSubmitController : MonoBehaviour
             case PhaseType.FinalGuess:
                 string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
                     ? finalGuessInput.text.Trim() : "(empty)";
-                albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guessText);
+                albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guessText, assignment.PairRole);
                 break;
         }
         Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
