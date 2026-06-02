@@ -104,6 +104,50 @@ namespace InkEcho.Network.Data
             return points;
         }
 
+        // Encode viewport UV [0,1] as ushort with 0.0001 precision — no delta, no precision loss.
+        public static byte[] ViewportPointsToByteArray(List<Vector3> viewportPoints)
+        {
+            if (viewportPoints == null || viewportPoints.Count == 0)
+                return new byte[0];
+
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write((ushort)viewportPoints.Count);
+                foreach (var p in viewportPoints)
+                {
+                    writer.Write((ushort)Mathf.Clamp(Mathf.RoundToInt(p.x * 10000f), 0, 10000));
+                    writer.Write((ushort)Mathf.Clamp(Mathf.RoundToInt(p.y * 10000f), 0, 10000));
+                }
+                return stream.ToArray();
+            }
+        }
+
+        public static List<Vector3> ByteArrayToViewportPoints(byte[] data)
+        {
+            var points = new List<Vector3>();
+            if (data == null || data.Length < 2) return points;
+            try
+            {
+                using (var stream = new MemoryStream(data))
+                using (var reader = new BinaryReader(stream))
+                {
+                    var count = reader.ReadUInt16();
+                    for (int i = 0; i < count; i++)
+                    {
+                        float x = reader.ReadUInt16() / 10000f;
+                        float y = reader.ReadUInt16() / 10000f;
+                        points.Add(new Vector3(x, y, 0f));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[DrawingDataConverter] Viewport decode error: {ex.Message}");
+            }
+            return points;
+        }
+
         /// <summary>
         /// Chuyển đổi Texture2D thành byte array (PNG format)
         /// </summary>

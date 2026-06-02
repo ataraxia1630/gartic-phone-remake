@@ -4,7 +4,7 @@ using Fusion;
 using InkEcho.Network.Core;
 using InkEcho.Network.GameModes;
 using InkEcho.Network.Players;
-using InkEcho.Network.Data;
+using UnityEngine;
 
 namespace InkEcho.Network.Phases
 {
@@ -64,8 +64,14 @@ namespace InkEcho.Network.Phases
             RevealLinkIndex = 0;
             IsGameFinished = false;
 
-            // initialize album store
+            // initialize album store — fallback FindObjectOfType nếu ServiceLocator bị null sau scene load
             var album = ServiceLocator.Get<Data.AlbumStore>();
+            if (album == null)
+            {
+                album = UnityEngine.Object.FindObjectOfType<Data.AlbumStore>();
+                if (album != null) ServiceLocator.Register<Data.AlbumStore>(album);
+                else Debug.LogWarning("[PhaseManager] AlbumStore không tìm thấy — PlayerCount sẽ là 0.");
+            }
             album?.Init(playerCount);
 
             CurrentPhase = PhaseType.Prompt;
@@ -235,6 +241,42 @@ namespace InkEcho.Network.Phases
             return false;
         }
 
+        public bool TryGetNextAssignment(PlayerRef currentWorker, out PhaseAssignment nextAssignment)
+        {
+            // NEW
+            if (RoundIndex + 1 >= TotalRounds)
+            {
+                nextAssignment = default;
+                return false;
+            }
+            if (_mode == null)
+            {
+                if (TotalRounds == 0) { nextAssignment = default; return false; }
+                _mode = GameModeFactory.Create(ActiveMode);
+            }
+            var nextPhase = (byte)(RoundIndex + 1);
+            var orderedPlayers = ResolvePlayOrder();
+            var nextAssignments = _mode.BuildAssignments(nextPhase, orderedPlayers);
+            for (int i = 0; i < nextAssignments.Count; i++)
+            {
+                if (nextAssignments[i].Worker == currentWorker)
+                {
+                    nextAssignment = nextAssignments[i];
+                    return true;
+                }
+            }
+            nextAssignment = default;
+            return false;
+        }
+        
+        public void TransitionToObserve()
+        {
+            if (!HasStateAuthority) return;
+            CurrentPhase = PhaseType.Observe;
+            _currentStrategy = new Strategies.ObservePhase();
+            _currentStrategy.OnEnter(this);
+            Debug.Log("[PhaseManager] Transitioning to Observe");
+        }
         private void ApplyRandomPlayOrder(IReadOnlyList<PlayerRef> orderedPlayers)
         {
             PlayOrderCount = 0;
@@ -251,7 +293,7 @@ namespace InkEcho.Network.Phases
             }
 
             var shuffled = new List<PlayerRef>(orderedPlayers);
-            var random = new Random(unchecked((int)DateTime.UtcNow.Ticks));
+            var random = new System.Random(unchecked((int)DateTime.UtcNow.Ticks));
             for (int i = shuffled.Count - 1; i > 0; i--)
             {
                 var swapIndex = random.Next(i + 1);
@@ -278,8 +320,8 @@ namespace InkEcho.Network.Phases
         {
             if (_mode == null)
             {
-                _assignments = null;
-                return;
+                if (TotalRounds == 0) { _assignments = null; return; }
+                _mode = GameModeFactory.Create(ActiveMode);
             }
 
             if (CurrentPhase == PhaseType.None || CurrentPhase == PhaseType.Reveal)

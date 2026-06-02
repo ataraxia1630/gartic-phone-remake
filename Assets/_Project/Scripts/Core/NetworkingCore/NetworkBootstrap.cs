@@ -1,14 +1,16 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Fusion;
 using Fusion.Sockets;
-using InkEcho.Hoai.Drawing;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Data;
 using InkEcho.Network.Phases;
 using InkEcho.Network.Players;
 using InkEcho.Network.StateMachine;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace InkEcho.Network.Core
 {
@@ -126,8 +128,21 @@ namespace InkEcho.Network.Core
         public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
         public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data)
         {
-            var channel = ServiceLocator.Get<DrawingChannel>();
-            if (channel != null) channel.HandleReliableData(player, key, data);
+            if (data.Count < 4) return;
+            if (data.Array[data.Offset] != 0xDA) return; // not a drawing texture
+
+            byte chainLink = data.Array[data.Offset + 1];
+            byte originSlot = data.Array[data.Offset + 2];
+            var png = new byte[data.Count - 3];
+            System.Array.Copy(data.Array, data.Offset + 3, png, 0, png.Length);
+            DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
+
+            // Fill missing author on host if the entry hasn't been assigned yet.
+            var album = ServiceLocator.Get<AlbumStore>();
+            if (album != null && album.HasStateAuthority)
+            {
+                album.SetWorkerIfMissing(chainLink, originSlot, player);
+            }
         }
         public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
         public void OnSceneLoadDone(NetworkRunner runner) => OnSceneLoadDoneEvent?.Invoke(runner);
@@ -143,7 +158,6 @@ namespace InkEcho.Network.Core
             Reclaim(ServiceLocator.Get<GameStateMachine>());
             Reclaim(ServiceLocator.Get<PhaseManager>());
             Reclaim(ServiceLocator.Get<AlbumStore>());
-            Reclaim(ServiceLocator.Get<DrawingChannel>());
         }
 
         private void Reclaim(NetworkBehaviour behaviour)

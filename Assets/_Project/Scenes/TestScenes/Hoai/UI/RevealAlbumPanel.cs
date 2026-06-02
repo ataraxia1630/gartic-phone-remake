@@ -1,9 +1,9 @@
 using Fusion;
-using InkEcho.Hoai.Drawing;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
-using InkEcho.Network.Phases;
 using InkEcho.Network.Players;
+using InkEcho.Network.StateMachine;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -49,6 +49,7 @@ namespace InkEcho.Hoai.UI
 
         private byte _shownAlbum = byte.MaxValue;
         private byte _shownLink = byte.MaxValue;
+        private bool _loggedMissing;
 
         private void OnEnable()
         {
@@ -69,21 +70,32 @@ namespace InkEcho.Hoai.UI
 
         private void Update()
         {
-            var pm = ServiceLocator.Get<PhaseManager>();
-            var album = ServiceLocator.Get<AlbumStore>();
-            if (pm == null || album == null) return;
+            // ServiceLocator có thể chưa có ref sau khi LoadScene(Single) sang ResultScene —
+            // fallback FindObjectOfType + re-register, giống PhaseManager.StartGame.
+            var gsm = Resolve<GameStateMachine>();
+            var album = Resolve<AlbumStore>();
+            if (gsm == null || album == null)
+            {
+                if (!_loggedMissing)
+                {
+                    _loggedMissing = true;
+                    Debug.LogWarning($"[RevealAlbumPanel] Thiếu singleton trong ResultScene — gsm={(gsm != null)}, album={(album != null)}. Không bind được data reveal.");
+                }
+                return;
+            }
+            _loggedMissing = false;
 
-            bool isHost = pm.HasStateAuthority;
+            bool isHost = gsm.HasStateAuthority;
             if (hostControlsRoot != null) hostControlsRoot.SetActive(isHost);
             if (statusLabel != null) statusLabel.text = isHost ? string.Empty : "Chờ host mở...";
 
-            byte chainSlot = pm.RevealAlbumIndex;
-            byte revealedLink = pm.RevealLinkIndex;
+            byte chainSlot = gsm.RevealAlbumIndex;
+            byte revealedLink = gsm.RevealLinkIndex;
             byte totalLinks = album.LinksPerChain;
 
             if (isHost && nextButton != null)
             {
-                nextButton.interactable = true;
+                nextButton.interactable = !gsm.IsRevealFinished;
                 if (nextButtonLabel != null)
                     nextButtonLabel.text = ResolveNextButtonText(chainSlot, revealedLink, totalLinks, album.PlayerCount);
             }
@@ -106,8 +118,6 @@ namespace InkEcho.Hoai.UI
 
         private void RefreshDisplay(AlbumStore album, byte chainSlot, byte revealedLink, byte totalLinks)
         {
-            var channel = ServiceLocator.Get<DrawingChannel>();
-
             if (titleLabel != null)
             {
                 var entry0 = album.GetEntry(0, chainSlot);
@@ -122,6 +132,11 @@ namespace InkEcho.Hoai.UI
 
             // Drawing links: link 1..totalLinks-2
             int drawingCount = Mathf.Max(0, (int)totalLinks - 2);
+
+            var storedKeys = new System.Text.StringBuilder();
+            int storedTextures = 0;
+            foreach (var (cl, os, png) in DrawingTextureStore.GetAllRawPngs()) { storedTextures++; storedKeys.Append($"({cl},{os}) "); }
+            Debug.Log($"[RevealAlbumPanel] Refresh album={chainSlot} link={revealedLink} totalLinks={totalLinks} drawingCount={drawingCount} playerCount={album.PlayerCount} storedTextures={storedTextures} storedKeys(chainLink,originSlot)=[{storedKeys}]");
             for (int i = 0; i < drawingSlots.Length; i++)
             {
                 var dslot = drawingSlots[i];
@@ -131,14 +146,16 @@ namespace InkEcho.Hoai.UI
                 dslot.root.SetActive(show);
                 if (!show) continue;
 
-                if (channel != null && channel.TryGetDrawing(linkIdx, chainSlot, out var tex, out var drawAuthor))
+                var entry = album.GetEntry(linkIdx, chainSlot);
+                var tex = DrawingTextureStore.GetTexture(linkIdx, chainSlot);
+                Debug.Log($"[RevealAlbumPanel] slot i={i} -> GetTexture(linkIdx={linkIdx}, chainSlot={chainSlot}) key={linkIdx * 32 + chainSlot} => {(tex != null ? $"FOUND {tex.width}x{tex.height}" : "NULL")}; entry.WorkerPlayer={entry.WorkerPlayer}");
+                if (tex != null)
                 {
                     if (dslot.drawingImage != null) { dslot.drawingImage.texture = tex; dslot.drawingImage.enabled = true; }
-                    if (dslot.authorLabel != null) dslot.authorLabel.text = $"Vẽ bởi: {ResolveName(drawAuthor)}";
+                    if (dslot.authorLabel != null) dslot.authorLabel.text = $"Vẽ bởi: {ResolveName(entry.WorkerPlayer)}";
                 }
                 else
                 {
-                    var entry = album.GetEntry(linkIdx, chainSlot);
                     if (dslot.drawingImage != null) dslot.drawingImage.enabled = false;
                     if (dslot.authorLabel != null) dslot.authorLabel.text = $"Vẽ bởi: {ResolveName(entry.WorkerPlayer)} (chưa tải)";
                 }
@@ -171,9 +188,20 @@ namespace InkEcho.Hoai.UI
 
         private void OnHostNext()
         {
-            var pm = ServiceLocator.Get<PhaseManager>();
-            if (pm == null || !pm.HasStateAuthority) return;
-            pm.RevealNext();
+            var gsm = ServiceLocator.Get<GameStateMachine>();
+            if (gsm == null) return;
+            gsm.Rpc_RevealNext();
+        }
+
+        // Lấy singleton từ ServiceLocator; nếu null (ServiceLocator chưa re-register sau scene load)
+        // thì tìm trong scene rồi đăng ký lại. Nếu trả null nghĩa là object thật sự không tồn tại
+        // (đã bị despawn) — khi đó log ở Update sẽ báo.
+        private static T Resolve<T>() where T : Object
+        {
+            if (ServiceLocator.TryGet<T>(out var svc) && svc != null) return svc;
+            var found = FindObjectOfType<T>();
+            if (found != null) ServiceLocator.Register<T>(found);
+            return found;
         }
 
         private static string ResolveName(PlayerRef player)

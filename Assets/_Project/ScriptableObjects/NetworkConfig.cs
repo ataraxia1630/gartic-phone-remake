@@ -7,8 +7,10 @@ namespace InkEcho.Network.Core
     public class NetworkConfig : ScriptableObject
     {
         [Header("Session")]
-        [Range(3, 8)] public int MaxPlayers = 8;
-        [Range(1, 8)] public int MinPlayersToStart = 3;
+        // Giới hạn 6: AlbumStore lưu MaxPlayers*(MaxPlayers+1) entry trong 1 NetworkObject;
+        // vượt 6 sẽ vượt giới hạn ~128KB của Fusion và spawn thất bại.
+        [Range(3, 6)] public int MaxPlayers = 6;
+        [Range(1, 6)] public int MinPlayersToStart = 3;
 
         [Header("Room Code")]
         [Range(3, 6)] public int RoomCodeLength = 4;

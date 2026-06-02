@@ -12,6 +12,8 @@ namespace InkEcho.Network.StateMachine.States
 
         public override GameStateType Type => GameStateType.Playing;
 
+        private const string GameSceneName = "BasePhase";
+
         public override void OnEnter(GameStateMachine machine)
         {
             Debug.Log("[GameState] -> Playing");
@@ -19,20 +21,16 @@ namespace InkEcho.Network.StateMachine.States
 
             UnsubscribeSceneLoadDone();
 
-            var phaseManager = ServiceLocator.Get<Phases.PhaseManager>();
-            if (phaseManager == null)
+            if (SceneManager.GetActiveScene().name == GameSceneName)
             {
-                Debug.LogWarning("[PlayingState] PhaseManager not found, cannot start game phases");
-            }
-
-            // If DrawingTest is already active, start immediately.
-            if (SceneManager.GetActiveScene().name == "DrawingTest")
-            {
-                phaseManager?.StartGame(machine.SelectedMode);
+                var pm = ResolvePhaseManager();
+                if (pm != null)
+                    pm.StartGame(machine.SelectedMode);
+                else
+                    Debug.LogError("[PlayingState] PhaseManager NULL — cannot start game phases");
                 return;
             }
 
-            // Start game phases when the networked scene load has completed.
             var bootstrap = ServiceLocator.Get<NetworkBootstrap>();
             if (bootstrap != null)
             {
@@ -41,21 +39,23 @@ namespace InkEcho.Network.StateMachine.States
                 {
                     if (machine.HasStateAuthority)
                     {
-                        phaseManager?.StartGame(machine.SelectedMode);
+                        var pm = ResolvePhaseManager();
+                        if (pm != null)
+                            pm.StartGame(machine.SelectedMode);
+                        else
+                            Debug.LogError("[PlayingState] PhaseManager NULL after scene load — StartGame skipped!");
                     }
                     UnsubscribeSceneLoadDone();
                 };
-
                 bootstrap.OnSceneLoadDoneEvent += _onSceneLoadDone;
             }
 
-            // Load drawing scene for all players (host/authority triggers scene load)
             try
             {
                 if (machine.Runner != null)
                 {
-                    machine.Runner.LoadScene("DrawingTest", UnityEngine.SceneManagement.LoadSceneMode.Single, UnityEngine.SceneManagement.LocalPhysicsMode.None, true);
-                    Debug.Log("[GameState] DrawingTest scene triggered ");
+                    machine.Runner.LoadScene(GameSceneName, UnityEngine.SceneManagement.LoadSceneMode.Single, UnityEngine.SceneManagement.LocalPhysicsMode.None, true);
+                    Debug.Log($"[GameState] Loading {GameSceneName}");
                 }
             }
             catch (System.Exception ex)
@@ -90,6 +90,21 @@ namespace InkEcho.Network.StateMachine.States
 
             _subscribedBootstrap = null;
             _onSceneLoadDone = null;
+        }
+
+        private static Phases.PhaseManager ResolvePhaseManager()
+        {
+            var pm = ServiceLocator.Get<Phases.PhaseManager>();
+            if (pm != null) return pm;
+
+            // Fallback: ServiceLocator might not have re-registered after scene change
+            pm = Object.FindObjectOfType<Phases.PhaseManager>();
+            if (pm != null)
+            {
+                ServiceLocator.Register<Phases.PhaseManager>(pm);
+                Debug.Log("[PlayingState] PhaseManager found via FindObjectOfType — re-registered in ServiceLocator");
+            }
+            return pm;
         }
     }
 }

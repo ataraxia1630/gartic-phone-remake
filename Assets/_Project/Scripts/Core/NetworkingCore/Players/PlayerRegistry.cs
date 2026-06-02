@@ -1,12 +1,17 @@
+using System;
 using System.Collections.Generic;
 using Fusion;
+using Fusion.Sockets;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
+using InkEcho.Network.Data;
+using UnityEngine;
 
 namespace InkEcho.Network.Players
 {
     public class PlayerRegistry : NetworkBehaviour, IPlayerLeft
     {
-        public const int MaxPlayers = 8;
+        public const int MaxPlayers = 6;
 
         [Networked, Capacity(MaxPlayers)]
         public NetworkDictionary<PlayerRef, PlayerSlotData> Slots => default;
@@ -153,6 +158,38 @@ namespace InkEcho.Network.Players
         public bool TryGetSlot(PlayerRef player, out PlayerSlotData slot)
         {
             return Slots.TryGet(player, out slot);
+        }
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void Rpc_SyncDrawingStroke(byte[] data, byte chainLink, byte originSlot,
+    byte colorR, byte colorG, byte colorB, RpcInfo info = default)
+        {
+            var points = DrawingDataConverter.ByteArrayToViewportPoints(data);
+            if (points.Count == 0) return;
+            var color = new Color(colorR / 255f, colorG / 255f, colorB / 255f);
+            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points, color);
+            Debug.Log($"[PlayerRegistry] Stroke synced: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}");
+        }
+
+        // Host gọi khi bắt đầu Reveal: mỗi client gửi lại toàn bộ raw PNG mình đang lưu về host.
+        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+        public void Rpc_RequestRebroadcastToHost(PlayerRef host, RpcInfo info = default)
+        {
+            var runner = NetworkBootstrap.Instance?.Runner;
+            if (runner == null) return;
+            if (runner.LocalPlayer == host) return; // host tự có, khỏi gửi lại chính mình
+
+            foreach (var (chainLink, originSlot, png) in DrawingTextureStore.GetAllRawPngs())
+            {
+                var packet = new byte[png.Length + 3];
+                packet[0] = 0xDA;
+                packet[1] = chainLink;
+                packet[2] = originSlot;
+                Array.Copy(png, 0, packet, 3, png.Length);
+                // Dùng key encode (chainLink, originSlot) để tránh collision khi gửi nhiều tranh liên tiếp
+                var key = ReliableKey.FromInts(0xDA, chainLink, originSlot, 0);
+                runner.SendReliableDataToPlayer(host, key, packet);
+                Debug.Log($"[PlayerRegistry] Re-broadcast drawing to host: chainLink={chainLink}, originSlot={originSlot}, size={png.Length}");
+            }
         }
     }
 }

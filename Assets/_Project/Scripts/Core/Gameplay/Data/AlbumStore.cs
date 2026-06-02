@@ -1,6 +1,8 @@
 ﻿using Fusion;
-using InkEcho.Network.Players;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
+using InkEcho.Network.Players;
+using UnityEngine;
 
 namespace InkEcho.Network.Data
 {
@@ -38,12 +40,13 @@ namespace InkEcho.Network.Data
                     Entries.Set(idx, AlbumEntry.Empty(link, slot, PlayerRef.None));
                 }
             }
+            DrawingStrokeStore.ClearStrokes();
         }
 
         private int IndexOf(int chainLink, int originSlot) => chainLink * PlayerCount + originSlot;
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_128> prompt, byte roleIndex, RpcInfo info = default)
+        public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_64> prompt, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
             var pm = ServiceLocator.Get<Phases.PhaseManager>();
@@ -60,11 +63,11 @@ namespace InkEcho.Network.Data
 
             if (roleIndex == 1)
             {
-                entry.Prompt = new NetworkString<_128>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
+                entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
             }
             else
             {
-                entry.Prompt = new NetworkString<_128>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
+                entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
             }
 
             entry.OriginPlayer = player;
@@ -107,13 +110,14 @@ namespace InkEcho.Network.Data
             var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
 
+            // Param vẫn là NetworkString<_64> để không phá vỡ caller; lưu xuống field _32 (cắt bớt nếu quá dài).
             if (roleIndex == 0)
             {
-                entry.GuessRole0 = guess;
+                entry.GuessRole0 = new NetworkString<_32>(guess.ToString());
             }
             else if (roleIndex == 1)
             {
-                entry.GuessRole1 = guess;
+                entry.GuessRole1 = new NetworkString<_32>(guess.ToString());
             }
 
             Entries.Set(idx, entry);
@@ -126,6 +130,17 @@ namespace InkEcho.Network.Data
         {
             var idx = IndexOf(chainLink, originSlot);
             return Entries.Get(idx);
+        }
+
+        // Host-side helper: set WorkerPlayer only if it has not been assigned yet.
+        public void SetWorkerIfMissing(int chainLink, int originSlot, PlayerRef player)
+        {
+            if (!HasStateAuthority) return;
+            var idx = IndexOf(chainLink, originSlot);
+            var entry = Entries.Get(idx);
+            if (entry.WorkerPlayer.IsRealPlayer) return;
+            entry.WorkerPlayer = player;
+            Entries.Set(idx, entry);
         }
     }
 }

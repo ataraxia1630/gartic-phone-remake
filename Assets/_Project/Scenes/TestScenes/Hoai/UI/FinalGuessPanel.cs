@@ -1,5 +1,5 @@
 using Fusion;
-using InkEcho.Hoai.Drawing;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
 using InkEcho.Network.Phases;
@@ -88,20 +88,25 @@ namespace InkEcho.Hoai.UI
         private void RefreshDrawing(PhaseManager pm)
         {
             var runner = NetworkBootstrap.Instance?.Runner;
-            var channel = ServiceLocator.Get<DrawingChannel>();
-            if (runner == null || channel == null) return;
+            if (runner == null) return;
             if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment)) return;
-            if (assignment.ChainLinkIndex == 0) return; // không thể có
+            if (assignment.ChainLinkIndex == 0) return;
 
             byte targetLink = (byte)(assignment.ChainLinkIndex - 1);
             byte targetSlot = assignment.AlbumOriginSlotIndex;
             if (targetLink == _lastShownLink && targetSlot == _lastShownSlot && targetDrawing != null && targetDrawing.texture != null)
                 return;
 
-            if (channel.TryGetDrawing(targetLink, targetSlot, out var tex, out var author))
+            var tex = DrawingTextureStore.GetTexture(targetLink, targetSlot);
+            if (tex != null)
             {
                 if (targetDrawing != null) { targetDrawing.texture = tex; targetDrawing.enabled = true; }
-                if (authorLabel != null) authorLabel.text = string.Format(authorFormat, ResolveName(author));
+                if (authorLabel != null)
+                {
+                    var album = ServiceLocator.Get<AlbumStore>();
+                    if (album != null)
+                        authorLabel.text = string.Format(authorFormat, ResolveName(album.GetEntry(targetLink, targetSlot).WorkerPlayer));
+                }
                 _lastShownLink = targetLink;
                 _lastShownSlot = targetSlot;
             }

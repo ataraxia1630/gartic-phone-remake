@@ -1,6 +1,5 @@
 using System.Collections;
 using Fusion;
-using InkEcho.Hoai.Drawing;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
 using InkEcho.Network.Phases;
@@ -19,7 +18,6 @@ namespace InkEcho.Network.Players
         [SerializeField] private NetworkObject gameStateMachinePrefab;
         [SerializeField] private NetworkObject phaseManagerPrefab;
         [SerializeField] private NetworkObject albumStorePrefab;
-        [SerializeField] private NetworkObject drawingChannelPrefab;
 
         private NetworkBootstrap _bootstrap;
         private bool _localPlayerSpawned;
@@ -73,8 +71,6 @@ namespace InkEcho.Network.Players
                 EnsureSingleton(runner, phaseManagerPrefab, "PhaseManager");
             if (ServiceLocator.Get<AlbumStore>() == null)
                 EnsureSingleton(runner, albumStorePrefab, "AlbumStore");
-            if (ServiceLocator.Get<DrawingChannel>() == null)
-                EnsureSingleton(runner, drawingChannelPrefab, "DrawingChannel");
         }
 
         private void HandlePlayerJoined(PlayerRef player)
@@ -108,7 +104,6 @@ namespace InkEcho.Network.Players
                 EnsureSingleton(runner, gameStateMachinePrefab, "GameStateMachine");
                 EnsureSingleton(runner, phaseManagerPrefab, "PhaseManager");
                 EnsureSingleton(runner, albumStorePrefab, "AlbumStore");
-                EnsureSingleton(runner, drawingChannelPrefab, "DrawingChannel");
             }
         }
 

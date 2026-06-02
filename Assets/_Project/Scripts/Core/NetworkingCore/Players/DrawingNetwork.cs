@@ -1,9 +1,10 @@
-using System.Collections.Generic;
 using Fusion;
-using UnityEngine;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
 using InkEcho.Network.Phases;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace InkEcho.Network.Players
 {
@@ -22,6 +23,8 @@ namespace InkEcho.Network.Players
         private int _localStrokeCount;
         private Vector3 _lastSentPoint;
         private bool _hasLastSentPoint;
+        private PhaseAssignment _lastKnownDrawAssignment;
+        private bool _hasLastKnownDrawAssignment;
 
         public override void Spawned()
         {
@@ -62,9 +65,9 @@ namespace InkEcho.Network.Players
 
         public void EndLocalStroke()
         {
-            // Chuyển đổi điểm thành byte array để gửi qua mạng (tối ưu hóa bandwidth)
-            byte[] strokeData = DrawingDataConverter.PointsToByteArray(_localPoints);
-            Rpc_ReceiveStrokeData(strokeData);
+            var _dbgPm = ServiceLocator.Get<PhaseManager>();
+            Debug.Log($"[DrawingNetwork] EndLocalStroke called | points={_localPoints.Count} | phase={_dbgPm?.CurrentPhase} | hasCached={_hasLastKnownDrawAssignment}");
+            if (_localPoints.Count == 0) { _localPoints.Clear(); return; }
 
             _localStrokeCount++;
 
@@ -85,11 +88,44 @@ namespace InkEcho.Network.Players
                 hash *= 1099511628211UL;
             }
 
-            var albumStore = ServiceLocator.Get<AlbumStore>();
+            byte chainLink = 0xFF, originSlot = 0xFF;
             var phaseManager = ServiceLocator.Get<PhaseManager>();
-            if (albumStore != null && phaseManager != null && phaseManager.CurrentPhase == PhaseType.Draw && phaseManager.TryGetAssignment(Runner.LocalPlayer, out var assignment))
+            var albumStore = ServiceLocator.Get<AlbumStore>();
+            PhaseAssignment assignment = default;
+            bool inDraw = phaseManager != null && phaseManager.CurrentPhase == PhaseType.Draw
+                && phaseManager.TryGetAssignment(Runner.LocalPlayer, out assignment);
+            if (inDraw)
             {
-                albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, hash, (ushort)_localStrokeCount);
+                chainLink = assignment.ChainLinkIndex;
+                originSlot = assignment.AlbumOriginSlotIndex;
+                albumStore?.Rpc_SubmitDrawing(originSlot, hash, (ushort)_localStrokeCount);
+            }
+            else if (_hasLastKnownDrawAssignment)
+            {
+                // Phase already transitioned before flush — use cached assignment so stroke is stored
+                chainLink = _lastKnownDrawAssignment.ChainLinkIndex;
+                originSlot = _lastKnownDrawAssignment.AlbumOriginSlotIndex;
+                Debug.Log($"[DrawingNetwork] EndLocalStroke using cached assignment: chainLink={chainLink}, originSlot={originSlot}");
+            }
+            // Send world-space stroke for real-time LineRenderer rendering
+            byte[] strokeData = DrawingDataConverter.PointsToByteArray(_localPoints);
+            Rpc_ReceiveStrokeData(strokeData, chainLink, originSlot);
+
+            // Send viewport UV for observe-phase storage.
+            // Computed here on the local machine while Camera.main is available.
+            if (chainLink != 0xFF)
+            {
+                var cam = Camera.main;
+                if (cam != null)
+                {
+                    var vpPoints = new List<Vector3>(_localPoints.Count);
+                    foreach (var p in _localPoints)
+                    {
+                        var vp = cam.WorldToViewportPoint(p);
+                        vpPoints.Add(new Vector3(vp.x, vp.y, 0f));
+                    }
+                    Rpc_StoreObserveStroke(DrawingDataConverter.ViewportPointsToByteArray(vpPoints), chainLink, originSlot);
+                }
             }
 
             _localPoints.Clear();
@@ -107,6 +143,12 @@ namespace InkEcho.Network.Players
                 }
 
                 return;
+            }
+            // Cache current assignment so EndLocalStroke can use it even after phase transitions
+            if (phaseManager.TryGetAssignment(Runner.LocalPlayer, out var cachedAssignment))
+            {
+                _lastKnownDrawAssignment = cachedAssignment;
+                _hasLastKnownDrawAssignment = true;
             }
 
             // Input reading is local - not tied to network authority
@@ -189,7 +231,7 @@ namespace InkEcho.Network.Players
         /// Giảm bandwidth so với gửi từng point riêng lẻ (80% compression)
         /// </summary>
         [Rpc(RpcSources.All, RpcTargets.All)]
-        public void Rpc_ReceiveStrokeData(byte[] encodedStrokeData, RpcInfo info = default)
+        public void Rpc_ReceiveStrokeData(byte[] encodedStrokeData, byte chainLink, byte originSlot, RpcInfo info = default)
         {
             var playerId = info.Source.PlayerId;
 
@@ -234,11 +276,32 @@ namespace InkEcho.Network.Players
             // Cập nhật LineRenderer
             lr.positionCount = pointList.Count;
             lr.SetPositions(pointList.ToArray());
+        }
 
-            // Debug info
-            float compressionPercent = (1 - (float)encodedStrokeData.Length / (points.Count * 12)) * 100;
-            Debug.Log($"[DrawingNetwork] Received stroke from player {playerId}: {points.Count} points, " +
-                      $"data size: {encodedStrokeData.Length} bytes ({compressionPercent:F1}% compression)");
+        // Stores viewport UV stroke in DrawingStrokeStore for observe-phase replay.
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void Rpc_StoreObserveStroke(byte[] vpData, byte chainLink, byte originSlot, RpcInfo info = default)
+        {
+            var points = DrawingDataConverter.ByteArrayToViewportPoints(vpData);
+            if (points.Count == 0) return;
+            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points, PlayerColorFor(info.Source.PlayerId));
+            Debug.Log($"[DrawingNetwork] Stored observe stroke: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}, from={info.Source}");
+        }
+
+        public void SubmitUVStroke(List<Vector3> uvPoints, byte chainLink, byte originSlot)
+        {
+            if (uvPoints == null || uvPoints.Count == 0) return;
+            var data = DrawingDataConverter.ViewportPointsToByteArray(uvPoints);
+            Rpc_StoreObserveStroke(data, chainLink, originSlot);
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void Rpc_ReceiveUVStroke(byte[] data, byte chainLink, byte originSlot, RpcInfo info = default)
+        {
+            var points = DrawingDataConverter.ByteArrayToPoints(data);
+            if (points.Count == 0) return;
+            DrawingStrokeStore.StoreStroke(chainLink, originSlot, points);
+            Debug.Log($"[DrawingNetwork] UV stroke received: chainLink={chainLink}, originSlot={originSlot}, points={points.Count}");
         }
 
         private Color PlayerColorFor(int playerId)

@@ -2,6 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Fusion;
+using Fusion.Sockets;
+using InkEcho.Gameplay.Data;
+using InkEcho.Network.Core;
+using InkEcho.Network.Phases;
+using InkEcho.Network.Data;
+using InkEcho.Network.Players;
 
 public class DrawingManager : MonoBehaviour
 {
@@ -15,6 +22,7 @@ public class DrawingManager : MonoBehaviour
     public int textureHeight = 600;
     public float minDistance = 0.05f;  // Đơn vị pixel thay vì world unit
 
+    private static readonly ReliableKey DrawingTextureKey = ReliableKey.FromInts(0xDA, 0, 0, 0);
     // State
     private Texture2D texture;
     private Color[] clearColors;
@@ -30,6 +38,12 @@ public class DrawingManager : MonoBehaviour
     private Vector2? lastPos = null;
     private bool isDrawing = false;
     private bool isClearing = false;
+
+    private readonly List<Vector3> _currentStrokeUV = new List<Vector3>();
+    private bool _wasInDrawPhase = false;
+    private byte _cachedChainLink;
+    private byte _cachedOriginSlot;
+    private bool _hasCachedAssignment;
 
     IEnumerator Start()
     {
@@ -71,8 +85,43 @@ public class DrawingManager : MonoBehaviour
 
     void Update()
     {
-        if (texture == null) return; // Thêm guard này
+        if (texture == null) return;
 
+        // Detect Draw phase transition to flush any in-progress stroke
+        var pm = ServiceLocator.Get<PhaseManager>();
+        bool nowInDraw = pm != null && pm.CurrentPhase == PhaseType.Draw;
+        if (!_wasInDrawPhase && nowInDraw)
+        {
+            // Cache assignment immediately on entering Draw phase so FlushCurrentStroke
+            // can use the correct chainLink/originSlot even after the phase has changed.
+            var runner2 = NetworkBootstrap.Instance?.Runner;
+            if (runner2 != null && pm.TryGetAssignment(runner2.LocalPlayer, out var a))
+            {
+                _cachedChainLink = a.ChainLinkIndex;
+                _cachedOriginSlot = a.AlbumOriginSlotIndex;
+                _hasCachedAssignment = true;
+                Debug.Log($"[DrawingManager] Cached Draw assignment: chainLink={_cachedChainLink}, originSlot={_cachedOriginSlot}");
+            }
+        }
+
+        if (_wasInDrawPhase && !nowInDraw)
+        {
+            FlushAndBroadcast();
+        }
+        _wasInDrawPhase = nowInDraw;
+
+        // Fallback: cache assignment during Draw even if we missed the phase transition.
+        if (nowInDraw && !_hasCachedAssignment)
+        {
+            var runner = NetworkBootstrap.Instance?.Runner;
+            if (runner != null && pm.TryGetAssignment(runner.LocalPlayer, out var a))
+            {
+                _cachedChainLink = a.ChainLinkIndex;
+                _cachedOriginSlot = a.AlbumOriginSlotIndex;
+                _hasCachedAssignment = true;
+                Debug.Log($"[DrawingManager] Cached Draw assignment (fallback): chainLink={_cachedChainLink}, originSlot={_cachedOriginSlot}");
+            }
+        }
         // Chỉ xử lý vẽ khi chuột nằm trong DrawingArea
         if (!IsMouseOverDrawingArea()) return;
 
@@ -80,11 +129,12 @@ public class DrawingManager : MonoBehaviour
         {
             lastPos = null;
             isDrawing = false;
+            _currentStrokeUV.Clear();
         }
 
         if (Input.GetMouseButton(0))
         {
-            if (isClearing) return; 
+            if (isClearing) return;
             if (!isDrawing)
             {
                 undoStack.Push(texture.GetPixels());
@@ -98,9 +148,113 @@ public class DrawingManager : MonoBehaviour
         {
             lastPos = null;
             isDrawing = false;
+            FlushCurrentStroke();
         }
     }
 
+    // Flush nét đang vẽ dở rồi gửi texture đi. Idempotent: sau khi gửi sẽ clear _hasCachedAssignment
+    // nên gọi nhiều lần (Update + OnDestroy) không bị broadcast trùng.
+    private void FlushAndBroadcast()
+    {
+        FlushCurrentStroke();
+        if (_hasCachedAssignment)
+            BroadcastTexture(_cachedChainLink, _cachedOriginSlot);
+        _hasCachedAssignment = false;
+    }
+
+    void OnDestroy()
+    {
+        // UI_Draw bị unload ngay khi đổi phase (PhaseSceneController.SwitchPhaseScene).
+        // Nếu Update chưa kịp bắt transition để broadcast trong frame đó, gửi nốt tranh trước khi object bị huỷ
+        // — nếu không tranh sẽ không bao giờ tới host và Reveal sẽ trống.
+        if (_hasCachedAssignment)
+            FlushAndBroadcast();
+    }
+
+    private void BroadcastTexture(byte chainLink, byte originSlot)
+    {
+        if (texture == null) return;
+        var runner = NetworkBootstrap.Instance?.Runner;
+        if (runner == null) return;
+
+        var png = texture.EncodeToPNG();
+
+        // Store locally — both decoded texture and raw bytes (needed for re-broadcast at Reveal)
+        DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
+
+        // Prefix with magic byte + chainLink + originSlot so receiver can identify it
+        var data = new byte[png.Length + 3];
+        data[0] = 0xDA; // magic: Drawing Artwork
+        data[1] = chainLink;
+        data[2] = originSlot;
+        System.Array.Copy(png, 0, data, 3, png.Length);
+
+        // Send to all other connected players (use runner.ActivePlayers — always up-to-date)
+        foreach (var player in runner.ActivePlayers)
+        {
+            if (player == runner.LocalPlayer) continue;
+            runner.SendReliableDataToPlayer(player, DrawingTextureKey, data);
+            Debug.Log($"[DrawingManager] Sent texture to {player}: chainLink={chainLink}, originSlot={originSlot}, size={png.Length} bytes");
+        }
+    }
+
+    private void FlushCurrentStroke()
+    {
+        Debug.Log($"[DrawingManager] FlushCurrentStroke: uvPoints={_currentStrokeUV.Count}");
+        if (_currentStrokeUV.Count == 0) return;
+        byte chainLink = _cachedChainLink;
+        byte originSlot = _cachedOriginSlot;
+
+        if (!_hasCachedAssignment)
+        {
+            var pm = ServiceLocator.Get<PhaseManager>();
+            var runner = NetworkBootstrap.Instance?.Runner;
+            if (pm == null || runner == null || pm.CurrentPhase != PhaseType.Draw)
+            {
+                Debug.LogWarning("[DrawingManager] FlushCurrentStroke: no cached assignment and not in Draw phase, discarding");
+                _currentStrokeUV.Clear();
+                return;
+            }
+            if (!pm.TryGetAssignment(runner.LocalPlayer, out var a))
+            {
+                Debug.LogWarning("[DrawingManager] TryGetAssignment failed");
+                _currentStrokeUV.Clear();
+                return;
+            }
+            chainLink = a.ChainLinkIndex;
+            originSlot = a.AlbumOriginSlotIndex;
+            _cachedChainLink = chainLink;
+            _cachedOriginSlot = originSlot;
+            _hasCachedAssignment = true;
+        }
+        var registry = ServiceLocator.Get<PlayerRegistry>();
+        if (registry == null)
+        {
+            Debug.LogWarning("[DrawingManager] PlayerRegistry not found, cannot sync stroke");
+            _currentStrokeUV.Clear();
+            return;
+        }
+        var allPoints = new List<Vector3>(_currentStrokeUV);
+        _currentStrokeUV.Clear();
+
+        byte cr = (byte)(currentColor.r * 255);
+        byte cg = (byte)(currentColor.g * 255);
+        byte cb = (byte)(currentColor.b * 255);
+
+        // Giới hạn payload RPC của Fusion ~512 byte; mỗi điểm = 4 byte + 2 byte header.
+        // Chia nét dài thành nhiều RPC ≤100 điểm (~402 byte), overlap 1 điểm để nét không bị đứt.
+        const int MaxPointsPerChunk = 100;
+        int i = 0;
+        while (i < allPoints.Count)
+        {
+            int end = Mathf.Min(i + MaxPointsPerChunk, allPoints.Count);
+            var chunk = allPoints.GetRange(i, end - i);
+            var strokeBytes = DrawingDataConverter.ViewportPointsToByteArray(chunk);
+            registry.Rpc_SyncDrawingStroke(strokeBytes, chainLink, originSlot, cr, cg, cb);
+            if (end >= allPoints.Count) break;
+            i = end - 1; // overlap điểm cuối làm điểm đầu chunk kế
+        }
+    }
     bool IsMouseOverDrawingArea()
     {
         return RectTransformUtility.RectangleContainsScreenPoint(
@@ -144,8 +298,10 @@ public class DrawingManager : MonoBehaviour
         }
 
         lastPos = texPos;
+        // Collect normalized UV point for network sync
+        _currentStrokeUV.Add(new Vector3(texPos.x / textureWidth, texPos.y / textureHeight, 0f));
         texture.Apply();
-        drawingCanvas.texture = texture; // Cập nhật texture sau mỗi lần vẽ
+        drawingCanvas.texture = texture;
     }
 
     void DrawCircle(int cx, int cy, Color color)

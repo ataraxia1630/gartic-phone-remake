@@ -10,24 +10,27 @@ namespace InkEcho.Network.GameModes.Modes
         public override GameModeType Type => GameModeType.Sandwich;
         public override int PlayersPerSlot => 1;
 
-        // Chain variant: Prompt + (Draw, Observe) * (N-1) + FinalGuess
-        // step 0          : Prompt        (chainLink 0)
-        // step 2k-1       : Draw at chainLink k         k = 1..N-1
-        // step 2k         : Observe targeting link k    k = 1..N-2 (panel hiển thị link k = ChainLinkIndex-1)
-        // step 2N-2       : FinalGuess    (chainLink N)
+
         public override int CalculateTotalRounds(int playerCount)
         {
-            if (playerCount <= 1) return 1;
-            return 2 * playerCount - 1;
+            // Prompt(1) + Draw(1) + (Observe+Draw) * (playerCount-1) + FinalGuess(1)
+            // 4 người: 1 + 1 + 2*3 + 1 = 9 rounds
+            return 2 + (playerCount - 1) * 2 + 1;
         }
 
-        public override PhaseType GetPhaseForRound(int step, int totalSteps)
+        public override PhaseType GetPhaseForRound(int roundIndex, int totalRounds)
         {
-            if (totalSteps <= 0) return PhaseType.None;
-            if (step <= 0) return PhaseType.Prompt;
-            if (step >= totalSteps - 1) return PhaseType.FinalGuess;
-            return (step & 1) == 1 ? PhaseType.Draw : PhaseType.Observe;
+            if (totalRounds <= 0) return PhaseType.None;
+
+            if (roundIndex == 0) return PhaseType.Prompt;
+            if (roundIndex == 1) return PhaseType.Draw;
+            if (roundIndex == totalRounds - 1) return PhaseType.FinalGuess;
+
+            // Round 2 trở đi: Observe → Draw → Observe → Draw...
+            int middleIndex = roundIndex - 2;
+            return middleIndex % 2 == 0 ? PhaseType.Observe : PhaseType.Draw;
         }
+
 
         public override IReadOnlyList<PhaseAssignment> BuildAssignments(int step, IReadOnlyList<PlayerRef> orderedPlayers)
         {

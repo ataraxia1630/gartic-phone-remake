@@ -2,7 +2,6 @@ using UnityEngine;
 using InkEcho.Network.Phases;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
-using InkEcho.Hoai.Drawing;
 using TMPro;
 
 public class LocalSubmitController : MonoBehaviour
@@ -65,42 +64,19 @@ public class LocalSubmitController : MonoBehaviour
                 albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText, assignment.PairRole);
                 break;
 
-            case PhaseType.Draw:
-                SubmitDrawing(assignment.ChainLinkIndex, assignment.AlbumOriginSlotIndex);
-                break;
-
             case PhaseType.FinalGuess:
                 string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
                     ? finalGuessInput.text.Trim() : "(empty)";
                 albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guessText, assignment.PairRole);
                 break;
+
+            case PhaseType.Draw:
+                // Set WorkerPlayer cho entry (= người vẽ). Ảnh PNG được broadcast riêng qua DrawingManager
+                // nên hash/strokes để 0 — reveal chỉ dùng WorkerPlayer (tên tác giả) + texture.
+                albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 0);
+                break;
         }
         Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
     }
 
-    private void SubmitDrawing(byte chainLink, byte originSlot)
-    {
-        if (drawingManager == null) drawingManager = FindObjectOfType<DrawingManager>();
-        if (drawingManager == null)
-        {
-            Debug.LogWarning("[LocalSubmit] Không tìm thấy DrawingManager — bỏ qua submit drawing.");
-            return;
-        }
-
-        var png = drawingManager.EncodeAsPng();
-        if (png == null || png.Length == 0)
-        {
-            Debug.LogWarning("[LocalSubmit] EncodeAsPng trả về null/empty.");
-            return;
-        }
-
-        var channel = ServiceLocator.Get<DrawingChannel>();
-        if (channel == null)
-        {
-            Debug.LogError("[LocalSubmit] DrawingChannel chưa được spawn — không gửi được tranh.");
-            return;
-        }
-
-        channel.SubmitLocalDrawing(chainLink, originSlot, png);
-    }
 }
