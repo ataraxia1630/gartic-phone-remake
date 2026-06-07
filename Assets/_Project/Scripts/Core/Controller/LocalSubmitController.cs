@@ -72,8 +72,8 @@ public class LocalSubmitController : MonoBehaviour
 
             case PhaseType.Draw:
                 // Set WorkerPlayer cho entry (= người vẽ). Ảnh PNG được broadcast riêng qua DrawingManager
-                // nên hash/strokes để 0 — reveal chỉ dùng WorkerPlayer (tên tác giả) + texture.
-                albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 0);
+                // Truyền strokes = 1 để đảm bảo khi Reveal, UI luôn nhận diện đây là một bức tranh (ngay cả khi mạng tải PNG hơi chậm)
+                albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 1);
                 break;
         }
         Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");

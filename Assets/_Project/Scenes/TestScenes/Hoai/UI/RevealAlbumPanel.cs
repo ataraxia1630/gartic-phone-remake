@@ -151,12 +151,39 @@ namespace InkEcho.Hoai.UI
                 Debug.Log($"[RevealAlbumPanel] slot i={i} -> GetTexture(linkIdx={linkIdx}, chainSlot={chainSlot}) key={linkIdx * 32 + chainSlot} => {(tex != null ? $"FOUND {tex.width}x{tex.height}" : "NULL")}; entry.WorkerPlayer={entry.WorkerPlayer}");
                 if (tex != null)
                 {
-                    if (dslot.drawingImage != null) { dslot.drawingImage.texture = tex; dslot.drawingImage.enabled = true; }
+                    if (dslot.drawingImage != null) 
+                    { 
+                        dslot.drawingImage.texture = tex; 
+                        dslot.drawingImage.enabled = true; 
+                        dslot.drawingImage.gameObject.SetActive(true);
+                        dslot.drawingImage.color = Color.white;
+
+                        // Cách sửa tận gốc vấn đề ScrollView: 
+                        // Khi nằm trong Layout Group của ScrollView, RawImage thường bị bóp nghẹt kích thước về 0x0
+                        // Ta sẽ tự động gắn/ép LayoutElement để Layout Group cấp đủ không gian (800x600) cho ảnh.
+                        var layoutElement = dslot.drawingImage.GetComponent<UnityEngine.UI.LayoutElement>();
+                        if (layoutElement == null) layoutElement = dslot.drawingImage.gameObject.AddComponent<UnityEngine.UI.LayoutElement>();
+                        layoutElement.minWidth = 800f;
+                        layoutElement.minHeight = 600f;
+                        layoutElement.preferredWidth = 800f;
+                        layoutElement.preferredHeight = 600f;
+                        
+                        var rt = dslot.drawingImage.rectTransform;
+                        Debug.Log($"[RevealAlbumPanel] UI DEBUG slot {i}: sizeDelta={rt.sizeDelta}, rect={rt.rect}, activeInHierarchy={dslot.drawingImage.gameObject.activeInHierarchy}, scale={rt.localScale}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[RevealAlbumPanel] LỖI: drawingImage bị NULL ở slot i={i} trong Inspector!");
+                    }
                     if (dslot.authorLabel != null) dslot.authorLabel.text = $"Vẽ bởi: {ResolveName(entry.WorkerPlayer)}";
                 }
                 else
                 {
-                    if (dslot.drawingImage != null) dslot.drawingImage.enabled = false;
+                    if (dslot.drawingImage != null) 
+                    {
+                        dslot.drawingImage.enabled = false;
+                        dslot.drawingImage.gameObject.SetActive(false);
+                    }
                     if (dslot.authorLabel != null) dslot.authorLabel.text = $"Vẽ bởi: {ResolveName(entry.WorkerPlayer)} (chưa tải)";
                 }
             }

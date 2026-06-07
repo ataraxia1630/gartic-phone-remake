@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -193,7 +193,8 @@ public class DrawingManager : MonoBehaviour
         foreach (var player in runner.ActivePlayers)
         {
             if (player == runner.LocalPlayer) continue;
-            runner.SendReliableDataToPlayer(player, DrawingTextureKey, data);
+            var key = ReliableKey.FromInts(0xDA, chainLink, originSlot, 0);
+            runner.SendReliableDataToPlayer(player, key, data);
             Debug.Log($"[DrawingManager] Sent texture to {player}: chainLink={chainLink}, originSlot={originSlot}, size={png.Length} bytes");
         }
     }

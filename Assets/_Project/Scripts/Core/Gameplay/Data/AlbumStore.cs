@@ -1,4 +1,4 @@
-﻿using Fusion;
+using Fusion;
 using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
 using InkEcho.Network.Players;
@@ -120,6 +120,7 @@ namespace InkEcho.Network.Data
                 entry.GuessRole1 = new NetworkString<_32>(guess.ToString());
             }
 
+            entry.WorkerPlayer = player; // LƯU LẠI TÁC GIẢ ĐỂ REVEAL KHÔNG BỊ TRỐNG
             Entries.Set(idx, entry);
 
             var registry = ServiceLocator.Get<PlayerRegistry>();
@@ -141,6 +142,22 @@ namespace InkEcho.Network.Data
             if (entry.WorkerPlayer.IsRealPlayer) return;
             entry.WorkerPlayer = player;
             Entries.Set(idx, entry);
+        }
+
+        [ContextMenu("Debug Dump Album")]
+        public void DebugDumpAlbum()
+        {
+            Debug.Log($"==== ALBUM DUMP (PlayerCount: {PlayerCount}, Links: {LinksPerChain}) ====");
+            for (byte chain = 0; chain < PlayerCount; chain++)
+            {
+                var originPlayer = GetEntry(0, chain).OriginPlayer;
+                Debug.Log($"-- Album {chain} (Origin: {originPlayer}) --");
+                for (byte link = 0; link < LinksPerChain; link++)
+                {
+                    var entry = GetEntry(link, chain);
+                    Debug.Log($"   Link {link}: Worker={entry.WorkerPlayer}, Prompt='{entry.Prompt}', Guess0='{entry.GuessRole0}', Guess1='{entry.GuessRole1}', Strokes={entry.DrawingStrokes}");
+                }
+            }
         }
     }
 }
