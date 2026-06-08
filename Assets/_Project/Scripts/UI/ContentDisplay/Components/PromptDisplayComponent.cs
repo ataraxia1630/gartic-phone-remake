@@ -8,7 +8,7 @@ namespace InkEcho.UI.ContentDisplay.Components
     /// </summary>
     public class PromptDisplayComponent : MonoBehaviour, IPromptDisplayComponent
     {
-        [SerializeField] private UnityEngine.UI.Text promptLabel;
+        [SerializeField] private TMPro.TMP_Text promptLabel;
 
         public void SetPrompt(string promptText)
         {

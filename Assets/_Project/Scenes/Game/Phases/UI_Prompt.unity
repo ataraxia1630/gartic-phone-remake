@@ -811,6 +811,7 @@ GameObject:
   - component: {fileID: 1149511647}
   - component: {fileID: 1149511646}
   - component: {fileID: 1149511645}
+  - component: {fileID: 1149511648}
   m_Layer: 5
   m_Name: InputField
   m_TagString: Untagged
@@ -977,6 +978,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1149511643}
   m_CullTransparentMesh: 1
+--- !u!114 &1149511648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1149511643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fe5956c09b2ac643be5038996a753f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InkEcho.Network.Players.PromptInputController
+  inputField: {fileID: 1149511645}
 --- !u!1 &1176565728
 GameObject:
   m_ObjectHideFlags: 0

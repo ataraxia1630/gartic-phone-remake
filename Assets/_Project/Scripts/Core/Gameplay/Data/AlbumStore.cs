@@ -49,9 +49,13 @@ namespace InkEcho.Network.Data
         public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_128> prompt, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
+            var pm = ServiceLocator.Get<Phases.PhaseManager>();
+            if (pm == null || pm.CurrentPhase != Phases.PhaseType.Prompt) return;
             var player = info.Source;
-            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
-            var idx = IndexOf(round, originSlot);
+            if (!pm.TryGetAssignment(player, out var assignment)) return;
+            if (assignment.AlbumOriginSlotIndex != originSlot) return;
+
+            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
 
             string currentText = entry.Prompt.ToString();
@@ -68,6 +72,8 @@ namespace InkEcho.Network.Data
 
             entry.OriginPlayer = player;
             Entries.Set(idx, entry);
+
+            Debug.Log($"[AlbumStore] Rpc_SubmitPrompt: chainLink={assignment.ChainLinkIndex}, idx={idx}, originSlot={originSlot}, text=\"{entry.Prompt}\"");
 
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.SetSubmittedPhase(player, true);

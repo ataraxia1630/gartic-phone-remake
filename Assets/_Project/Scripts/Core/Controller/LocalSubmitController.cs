@@ -2,6 +2,8 @@
 using InkEcho.Network.Phases;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
+using InkEcho.Network.Players;
+using Fusion;
 
 public class LocalSubmitController : MonoBehaviour
 {
@@ -43,9 +45,14 @@ public class LocalSubmitController : MonoBehaviour
             switch (phaseManager.CurrentPhase)
             {
                 case PhaseType.Prompt:
-                    // TODO: Lấy string từ Input Field
-                    string promptText = "Time's up prompt!";
-                    //albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText);
+                    if (ServiceLocator.TryGet<PromptInputController>(out var promptInput))
+                    {
+                        promptInput.ForceSubmit("Time's up prompt!");
+                    }
+                    else
+                    {
+                        albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, new NetworkString<_128>("Time's up prompt!"), assignment.PairRole);
+                    }
                     break;
 
                 case PhaseType.Draw:
