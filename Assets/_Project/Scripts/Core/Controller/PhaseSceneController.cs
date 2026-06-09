@@ -86,15 +86,6 @@ public class PhaseSceneController : MonoBehaviour
 
         if (!string.IsNullOrEmpty(sceneToLoad))
         {
-            string sceneToLoad = modeConfig.GetSceneNameForPhase(newPhase);
-            Debug.Log($"[PhaseSceneController] sceneToLoad resolved to: \"{sceneToLoad}\"");
-
-            if (!string.IsNullOrEmpty(sceneToLoad))
-            {
-                SceneManager.LoadSceneAsync(sceneToLoad, LoadSceneMode.Additive);
-                _currentLoadedScene = sceneToLoad;
-                Debug.Log($"[PhaseSceneController] Loading scene additively: {sceneToLoad}");
-            }
             Debug.Log($"[PhaseSceneController] Loading phase scene: {sceneToLoad} for phase {newPhase}");
             SceneManager.LoadSceneAsync(sceneToLoad, LoadSceneMode.Additive);
             _currentLoadedScene = sceneToLoad;

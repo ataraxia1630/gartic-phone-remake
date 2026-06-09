@@ -29,7 +29,6 @@ namespace InkEcho.Network.StateMachine.States
             // If BasePhase is already active, start immediately.
             if (SceneManager.GetActiveScene().name == "BasePhase")
             {
-                phaseManager?.StartGame(machine.SelectedMode);
                 var pm = ResolvePhaseManager();
                 if (pm != null)
                     pm.StartGame(machine.SelectedMode);

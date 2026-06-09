@@ -119,11 +119,11 @@ namespace InkEcho.Network.Data
             // Param vẫn là NetworkString<_64> để không phá vỡ caller; lưu xuống field _32 (cắt bớt nếu quá dài).
             if (roleIndex == 0)
             {
-                entry.GuessRole0 = new NetworkString<_32>(guess.ToString());
+                entry.GuessRole0 = guess;
             }
             else if (roleIndex == 1)
             {
-                entry.GuessRole1 = new NetworkString<_32>(guess.ToString());
+                entry.GuessRole1 = guess;
             }
 
             entry.WorkerPlayer = player; // LƯU LẠI TÁC GIẢ ĐỂ REVEAL KHÔNG BỊ TRỐNG

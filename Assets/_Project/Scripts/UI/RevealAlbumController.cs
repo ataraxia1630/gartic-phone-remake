@@ -37,6 +37,12 @@ namespace InkEcho.UI
         private byte _lastLinkIndex = byte.MaxValue;
         private bool _lastIsFinished;
 
+        // Retry state for drawing display
+        private bool _pendingDrawing;
+        private byte _pendingChainLink;
+        private byte _pendingOriginSlot;
+        private Texture2D _shownTexture;
+
         private void Start()
         {
             // Setup button listeners
@@ -63,6 +69,9 @@ namespace InkEcho.UI
             if (returnToLobbyButton != null) returnToLobbyButton.gameObject.SetActive(isHost && gsm.IsRevealFinished);
             if (revealFinishedPanel != null) revealFinishedPanel.SetActive(gsm.IsRevealFinished);
 
+            // Poll pending drawing texture
+            if (_pendingDrawing)
+                TryShowPendingDrawing();
             // Check nếu index thay đổi → cập nhật UI
             if (gsm.RevealAlbumIndex != _lastAlbumIndex ||
                 gsm.RevealLinkIndex != _lastLinkIndex ||
@@ -164,43 +173,49 @@ namespace InkEcho.UI
         {
             if (drawingPanel != null) drawingPanel.SetActive(true);
 
-            if (drawingImage != null)
+            _pendingDrawing = true;
+            _pendingChainLink = chainLink;
+            _pendingOriginSlot = originSlot;
+            _shownTexture = null;
+
+            TryShowPendingDrawing();
+        }
+
+        private void TryShowPendingDrawing()
+        {
+            if (!_pendingDrawing || drawingImage == null) return;
+
+            var tex = DrawingTextureStore.GetTexture(_pendingChainLink, _pendingOriginSlot);
+            if (tex != null)
             {
-                // Try DrawingTextureStore first (PNG textures sent via ReliableData)
-                var tex = DrawingTextureStore.GetTexture(chainLink, originSlot);
-                if (tex != null)
+                if (tex == _shownTexture) return;
+                _shownTexture = tex;
+                drawingImage.texture = tex;
+                drawingImage.gameObject.SetActive(true);
+                _pendingDrawing = false;
+                Debug.Log($"[RevealAlbumController] Loaded texture: chainLink={_pendingChainLink}, originSlot={_pendingOriginSlot}");
+                return;
+            }
+
+            // Try rendering from stroke data
+            var strokes = DrawingStrokeStore.GetStrokes(_pendingChainLink, _pendingOriginSlot);
+            if (strokes != null && strokes.Count > 0)
+            {
+                var renderedTex = RenderStrokesToTexture(strokes,
+                    DrawingStrokeStore.GetStrokeColors(_pendingChainLink, _pendingOriginSlot));
+                if (renderedTex != null)
                 {
-                    drawingImage.texture = tex;
+                    _shownTexture = renderedTex;
+                    drawingImage.texture = renderedTex;
                     drawingImage.gameObject.SetActive(true);
-                    Debug.Log($"[RevealAlbumController] Loaded texture from DrawingTextureStore: chainLink={chainLink}, originSlot={originSlot}");
-                }
-                else
-                {
-                    // Try rendering from stroke data
-                    var strokes = DrawingStrokeStore.GetStrokes(chainLink, originSlot);
-                    if (strokes != null && strokes.Count > 0)
-                    {
-                        var renderedTex = RenderStrokesToTexture(strokes,
-                            DrawingStrokeStore.GetStrokeColors(chainLink, originSlot));
-                        if (renderedTex != null)
-                        {
-                            drawingImage.texture = renderedTex;
-                            drawingImage.gameObject.SetActive(true);
-                            Debug.Log($"[RevealAlbumController] Rendered from strokes: chainLink={chainLink}, originSlot={originSlot}, strokes={strokes.Count}");
-                        }
-                        else
-                        {
-                            drawingImage.gameObject.SetActive(false);
-                            Debug.LogWarning($"[RevealAlbumController] Failed to render strokes for chainLink={chainLink}, originSlot={originSlot}");
-                        }
-                    }
-                    else
-                    {
-                        drawingImage.gameObject.SetActive(false);
-                        Debug.LogWarning($"[RevealAlbumController] No drawing data for chainLink={chainLink}, originSlot={originSlot}");
-                    }
+                    _pendingDrawing = false;
+                    Debug.Log($"[RevealAlbumController] Rendered from strokes: chainLink={_pendingChainLink}, originSlot={_pendingOriginSlot}, strokes={strokes.Count}");
+                    return;
                 }
             }
+            // No data yet — keep polling (drawingImage stays hidden)
+            drawingImage.gameObject.SetActive(false);
+            Debug.Log($"[RevealAlbumController] Waiting for drawing data: chainLink={_pendingChainLink}, originSlot={_pendingOriginSlot}");
         }
 
         private void ShowGuess(string guess0, string guess1)
@@ -216,6 +231,7 @@ namespace InkEcho.UI
 
         private void HideAllPanels()
         {
+            _pendingDrawing = false;
             if (promptPanel != null) promptPanel.SetActive(false);
             if (drawingPanel != null) drawingPanel.SetActive(false);
             if (guessPanel != null) guessPanel.SetActive(false);

@@ -92,27 +92,20 @@ public class LocalSubmitController : MonoBehaviour
                     break;
             }
             Debug.Log($"[LocalSubmit] Ép nộp bài thành công cho phase {phaseManager.CurrentPhase}");
-        }
+            switch (phaseManager.CurrentPhase)
+            {
+                case PhaseType.FinalGuess:
+                    string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
+                        ? finalGuessInput.text.Trim() : "(empty)";
+                    albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, new NetworkString<_16>(guessText), assignment.PairRole);
+                    break;
 
-        switch (phaseManager.CurrentPhase)
-        {
-            case PhaseType.Prompt:
-                string promptText = promptInput != null && !string.IsNullOrWhiteSpace(promptInput.text)
-                    ? promptInput.text.Trim() : "(empty)";
-                albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText, assignment.PairRole);
-                break;
-
-            case PhaseType.FinalGuess:
-                string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
-                    ? finalGuessInput.text.Trim() : "(empty)";
-                albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guessText, assignment.PairRole);
-                break;
-
-            case PhaseType.Draw:
-                // Set WorkerPlayer cho entry (= người vẽ). Ảnh PNG được broadcast riêng qua DrawingManager
-                // Truyền strokes = 1 để đảm bảo khi Reveal, UI luôn nhận diện đây là một bức tranh (ngay cả khi mạng tải PNG hơi chậm)
-                albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 1);
-                break;
+                case PhaseType.Draw:
+                    // Ảnh PNG được broadcast riêng qua DrawingManager; truyền strokes=1 để Reveal nhận diện đây là bức tranh
+                    albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 1);
+                    break;
+            }
+            Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
         }
         Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
     }
