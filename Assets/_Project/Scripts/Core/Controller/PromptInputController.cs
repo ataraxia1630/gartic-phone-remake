@@ -47,8 +47,6 @@ namespace InkEcho.Network.Players
         /// <summary>Called by LocalSubmitController.ForceSubmitCurrentWork — falls back to placeholder text if input is empty.</summary>
         public void ForceSubmit(string fallbackText)
         {
-            if (_hasSubmitted) return;
-
             var phaseManager = ServiceLocator.Get<PhaseManager>();
             var albumStore = ServiceLocator.Get<AlbumStore>();
             if (phaseManager == null || albumStore == null) return;
@@ -60,9 +58,6 @@ namespace InkEcho.Network.Players
             if (text.Length > 60) text = text.Substring(0, 60);
 
             albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, new NetworkString<_64>(text), assignment.PairRole);
-            _hasSubmitted = true;
-
-            if (inputField != null) inputField.interactable = false;
 
             Debug.Log($"[PromptInputController] Submitted prompt: \"{text}\" for originSlot={assignment.AlbumOriginSlotIndex}");
         }

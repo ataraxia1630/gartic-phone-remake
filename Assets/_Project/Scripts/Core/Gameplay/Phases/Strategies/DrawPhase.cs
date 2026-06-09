@@ -29,21 +29,7 @@ namespace InkEcho.Network.Phases.Strategies
 
         public override void Tick(PhaseManager manager)
         {
-            var registry = ServiceLocator.Get<PlayerRegistry>();
-            //if (registry != null && registry.AreAllConnectedSubmitted())
-            //{
-            //    manager.AdvancePhase();
-            //    return;
-            //}
-
-            //if (manager.PhaseTimer.Expired(manager.Runner)) manager.AdvancePhase();
-
-            bool allDone = registry != null && registry.AreAllConnectedSubmitted();
-
-            if (allDone || manager.PhaseTimer.Expired(manager.Runner))
-            {
-                manager.AdvancePhase();
-            }
+            if (manager.PhaseTimer.Expired(manager.Runner)) manager.AdvancePhase();
         }
     }
 }

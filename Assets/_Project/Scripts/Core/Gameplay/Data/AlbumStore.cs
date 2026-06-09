@@ -62,18 +62,18 @@ namespace InkEcho.Network.Data
             var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
 
-            string currentText = entry.Prompt.ToString();
-            string newText = prompt.ToString();
+            //string currentText = entry.Prompt.ToString();
+            //string newText = prompt.ToString();
 
-            if (roleIndex == 1) 
-            {
-                entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
-            }
-            else
-            {
-                entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
-            }
-
+            //if (roleIndex == 1) 
+            //{
+            //    entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
+            //}
+            //else
+            //{
+            //    entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
+            //}
+            entry.Prompt = prompt;
             entry.OriginPlayer = player;
             Entries.Set(idx, entry);
 
