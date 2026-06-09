@@ -1,12 +1,21 @@
-﻿using UnityEngine;
+using UnityEngine;
 using InkEcho.Network.Phases;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
 using InkEcho.Network.Players;
 using Fusion;
+using TMPro;
 
 public class LocalSubmitController : MonoBehaviour
 {
+    [Header("Phase Input Bindings")]
+    [Tooltip("InputField cho Prompt phase (kéo từ UI_Prompt nếu cùng scene, hoặc null nếu auto-find).")]
+    [SerializeField] private TMP_InputField promptInput;
+    [Tooltip("InputField cho FinalGuess phase.")]
+    [SerializeField] private TMP_InputField finalGuessInput;
+    [Tooltip("DrawingManager đang chạy trong UI_Draw (kéo từ scene khi đã load, hoặc null để auto-find).")]
+    [SerializeField] private DrawingManager drawingManager;
+
     private PhaseType _lastObservedPhase = PhaseType.None;
     private bool _hasSubmittedThisPhase = false;
 
@@ -32,6 +41,9 @@ public class LocalSubmitController : MonoBehaviour
             }
         }
     }
+
+    // Có thể bind nút Submit trong UI gọi vào đây (chạy ngay không đợi timeout).
+    public void SubmitNow() => ForceSubmitCurrentWork();
 
     public void ForceSubmitCurrentWork()
     {
@@ -80,6 +92,33 @@ public class LocalSubmitController : MonoBehaviour
                     break;
             }
             Debug.Log($"[LocalSubmit] Ép nộp bài thành công cho phase {phaseManager.CurrentPhase}");
+        if (!phaseManager.TryGetAssignment(phaseManager.Runner.LocalPlayer, out var assignment))
+        {
+            Debug.Log($"[LocalSubmit] Local player không có assignment trong phase {phaseManager.CurrentPhase}, skip.");
+            return;
         }
+
+        switch (phaseManager.CurrentPhase)
+        {
+            case PhaseType.Prompt:
+                string promptText = promptInput != null && !string.IsNullOrWhiteSpace(promptInput.text)
+                    ? promptInput.text.Trim() : "(empty)";
+                albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText, assignment.PairRole);
+                break;
+
+            case PhaseType.FinalGuess:
+                string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
+                    ? finalGuessInput.text.Trim() : "(empty)";
+                albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guessText, assignment.PairRole);
+                break;
+
+            case PhaseType.Draw:
+                // Set WorkerPlayer cho entry (= người vẽ). Ảnh PNG được broadcast riêng qua DrawingManager
+                // Truyền strokes = 1 để đảm bảo khi Reveal, UI luôn nhận diện đây là một bức tranh (ngay cả khi mạng tải PNG hơi chậm)
+                albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 1);
+                break;
+        }
+        Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
     }
+
 }

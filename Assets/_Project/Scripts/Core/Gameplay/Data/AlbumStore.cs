@@ -1,4 +1,4 @@
-﻿using Fusion;
+using Fusion;
 using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
 using InkEcho.Network.Players;
@@ -107,20 +107,26 @@ namespace InkEcho.Network.Data
         public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_16> guess, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
+            var pm = ServiceLocator.Get<Phases.PhaseManager>();
+            if (pm == null || pm.CurrentPhase != Phases.PhaseType.FinalGuess) return;
             var player = info.Source;
-            var round = (byte)ServiceLocator.Get<Phases.PhaseManager>().RoundIndex;
-            var idx = IndexOf(round, originSlot);
+            if (!pm.TryGetAssignment(player, out var assignment)) return;
+            if (assignment.AlbumOriginSlotIndex != originSlot) return;
+
+            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
 
+            // Param vẫn là NetworkString<_64> để không phá vỡ caller; lưu xuống field _32 (cắt bớt nếu quá dài).
             if (roleIndex == 0)
             {
-                entry.GuessRole0 = guess;
+                entry.GuessRole0 = new NetworkString<_32>(guess.ToString());
             }
             else if (roleIndex == 1)
             {
-                entry.GuessRole1 = guess;
+                entry.GuessRole1 = new NetworkString<_32>(guess.ToString());
             }
 
+            entry.WorkerPlayer = player; // LƯU LẠI TÁC GIẢ ĐỂ REVEAL KHÔNG BỊ TRỐNG
             Entries.Set(idx, entry);
 
             var registry = ServiceLocator.Get<PlayerRegistry>();
@@ -131,6 +137,33 @@ namespace InkEcho.Network.Data
         {
             var idx = IndexOf(chainLink, originSlot);
             return Entries.Get(idx);
+        }
+
+        // Host-side helper: set WorkerPlayer only if it has not been assigned yet.
+        public void SetWorkerIfMissing(int chainLink, int originSlot, PlayerRef player)
+        {
+            if (!HasStateAuthority) return;
+            var idx = IndexOf(chainLink, originSlot);
+            var entry = Entries.Get(idx);
+            if (entry.WorkerPlayer.IsRealPlayer) return;
+            entry.WorkerPlayer = player;
+            Entries.Set(idx, entry);
+        }
+
+        [ContextMenu("Debug Dump Album")]
+        public void DebugDumpAlbum()
+        {
+            Debug.Log($"==== ALBUM DUMP (PlayerCount: {PlayerCount}, Links: {LinksPerChain}) ====");
+            for (byte chain = 0; chain < PlayerCount; chain++)
+            {
+                var originPlayer = GetEntry(0, chain).OriginPlayer;
+                Debug.Log($"-- Album {chain} (Origin: {originPlayer}) --");
+                for (byte link = 0; link < LinksPerChain; link++)
+                {
+                    var entry = GetEntry(link, chain);
+                    Debug.Log($"   Link {link}: Worker={entry.WorkerPlayer}, Prompt='{entry.Prompt}', Guess0='{entry.GuessRole0}', Guess1='{entry.GuessRole1}', Strokes={entry.DrawingStrokes}");
+                }
+            }
         }
     }
 }

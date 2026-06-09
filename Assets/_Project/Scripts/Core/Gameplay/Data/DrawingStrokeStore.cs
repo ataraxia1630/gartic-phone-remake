@@ -46,6 +46,12 @@ namespace InkEcho.Gameplay.Data
             return new List<List<Vector3>>();
         }
 
+        public static bool HasStrokes(int chainLink, int originSlot)
+        {
+            var key = Key(chainLink, originSlot);
+            return _strokes.TryGetValue(key, out var strokeList) && strokeList.Count > 0;
+        }
+
         public static IReadOnlyList<Color> GetStrokeColors(int chainLink, int originSlot)
         {
             var key = Key(chainLink, originSlot);

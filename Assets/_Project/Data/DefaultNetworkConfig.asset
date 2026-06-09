@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4684b8837892c841a651408c1593695, type: 3}
   m_Name: DefaultNetworkConfig
   m_EditorClassIdentifier: Assembly-CSharp::GarticPhone.Network.Core.NetworkConfig
-  MaxPlayers: 8
+  MaxPlayers: 6
   MinPlayersToStart: 1
   RoomCodeLength: 6
   RoomCodeRetryAttempts: 5
