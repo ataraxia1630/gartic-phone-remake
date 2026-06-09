@@ -92,13 +92,6 @@ namespace InkEcho.Network.Core
         public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
         {
             OnPlayerLeftEvent?.Invoke(player);
-            StartCoroutine(TryReclaimAuthorityNextFrame());
-        }
-
-        private System.Collections.IEnumerator TryReclaimAuthorityNextFrame()
-        {
-            yield return null;
-            yield return null;
             TryReclaimAuthorityIfMaster();
         }
 
@@ -136,13 +129,6 @@ namespace InkEcho.Network.Core
             var png = new byte[data.Count - 3];
             System.Array.Copy(data.Array, data.Offset + 3, png, 0, png.Length);
             DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
-
-            // Fill missing author on host if the entry hasn't been assigned yet.
-            var album = ServiceLocator.Get<AlbumStore>();
-            if (album != null && album.HasStateAuthority)
-            {
-                album.SetWorkerIfMissing(chainLink, originSlot, player);
-            }
         }
         public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
         public void OnSceneLoadDone(NetworkRunner runner) => OnSceneLoadDoneEvent?.Invoke(runner);

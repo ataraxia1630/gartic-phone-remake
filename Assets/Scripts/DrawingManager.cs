@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -48,13 +48,6 @@ public class DrawingManager : MonoBehaviour
     IEnumerator Start()
     {
         yield return null;
-
-        if (drawingCanvas == null)
-        {
-            Debug.LogError("[DrawingManager] drawingCanvas (RawImage) chưa được gán trong Inspector! Hãy kéo RawImage vào field 'Drawing Canvas'.", this);
-            yield break;
-        }
-
         // Lấy kích thước thực của RawImage
         int width = Mathf.RoundToInt(drawingCanvas.rectTransform.rect.width);
         int height = Mathf.RoundToInt(drawingCanvas.rectTransform.rect.height);
@@ -106,22 +99,12 @@ public class DrawingManager : MonoBehaviour
 
         if (_wasInDrawPhase && !nowInDraw)
         {
-            FlushAndBroadcast();
+            FlushCurrentStroke();
+            if (_hasCachedAssignment)
+                BroadcastTexture(_cachedChainLink, _cachedOriginSlot);
+            _hasCachedAssignment = false;
         }
         _wasInDrawPhase = nowInDraw;
-
-        // Fallback: cache assignment during Draw even if we missed the phase transition.
-        if (nowInDraw && !_hasCachedAssignment)
-        {
-            var runner = NetworkBootstrap.Instance?.Runner;
-            if (runner != null && pm.TryGetAssignment(runner.LocalPlayer, out var a))
-            {
-                _cachedChainLink = a.ChainLinkIndex;
-                _cachedOriginSlot = a.AlbumOriginSlotIndex;
-                _hasCachedAssignment = true;
-                Debug.Log($"[DrawingManager] Cached Draw assignment (fallback): chainLink={_cachedChainLink}, originSlot={_cachedOriginSlot}");
-            }
-        }
         // Chỉ xử lý vẽ khi chuột nằm trong DrawingArea
         if (!IsMouseOverDrawingArea()) return;
 
@@ -152,35 +135,14 @@ public class DrawingManager : MonoBehaviour
         }
     }
 
-    // Flush nét đang vẽ dở rồi gửi texture đi. Idempotent: sau khi gửi sẽ clear _hasCachedAssignment
-    // nên gọi nhiều lần (Update + OnDestroy) không bị broadcast trùng.
-    private void FlushAndBroadcast()
-    {
-        FlushCurrentStroke();
-        if (_hasCachedAssignment)
-            BroadcastTexture(_cachedChainLink, _cachedOriginSlot);
-        _hasCachedAssignment = false;
-    }
-
-    void OnDestroy()
-    {
-        // UI_Draw bị unload ngay khi đổi phase (PhaseSceneController.SwitchPhaseScene).
-        // Nếu Update chưa kịp bắt transition để broadcast trong frame đó, gửi nốt tranh trước khi object bị huỷ
-        // — nếu không tranh sẽ không bao giờ tới host và Reveal sẽ trống.
-        if (_hasCachedAssignment)
-            FlushAndBroadcast();
-    }
-
     private void BroadcastTexture(byte chainLink, byte originSlot)
     {
         if (texture == null) return;
         var runner = NetworkBootstrap.Instance?.Runner;
-        if (runner == null) return;
+        var registry = ServiceLocator.Get<PlayerRegistry>();
+        if (runner == null || registry == null) return;
 
         var png = texture.EncodeToPNG();
-
-        // Store locally — both decoded texture and raw bytes (needed for re-broadcast at Reveal)
-        DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
 
         // Prefix with magic byte + chainLink + originSlot so receiver can identify it
         var data = new byte[png.Length + 3];
@@ -189,13 +151,17 @@ public class DrawingManager : MonoBehaviour
         data[2] = originSlot;
         System.Array.Copy(png, 0, data, 3, png.Length);
 
-        // Send to all other connected players (use runner.ActivePlayers — always up-to-date)
-        foreach (var player in runner.ActivePlayers)
+        // Store locally (this player already has it — no need to receive)
+        DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
+
+        // Send to all other connected players
+        foreach (var pair in registry.Slots)
         {
-            if (player == runner.LocalPlayer) continue;
-            var key = ReliableKey.FromInts(0xDA, chainLink, originSlot, 0);
-            runner.SendReliableDataToPlayer(player, key, data);
-            Debug.Log($"[DrawingManager] Sent texture to {player}: chainLink={chainLink}, originSlot={originSlot}, size={png.Length} bytes");
+            if (!pair.Value.IsConnected) continue;
+            if (pair.Key == runner.LocalPlayer) continue;
+            // Correct:
+            runner.SendReliableDataToPlayer(pair.Key, DrawingTextureKey, data);
+            Debug.Log($"[DrawingManager] Sent texture to {pair.Key}: chainLink={chainLink}, originSlot={originSlot}, size={png.Length} bytes");
         }
     }
 
@@ -224,9 +190,6 @@ public class DrawingManager : MonoBehaviour
             }
             chainLink = a.ChainLinkIndex;
             originSlot = a.AlbumOriginSlotIndex;
-            _cachedChainLink = chainLink;
-            _cachedOriginSlot = originSlot;
-            _hasCachedAssignment = true;
         }
         var registry = ServiceLocator.Get<PlayerRegistry>();
         if (registry == null)
@@ -235,26 +198,12 @@ public class DrawingManager : MonoBehaviour
             _currentStrokeUV.Clear();
             return;
         }
-        var allPoints = new List<Vector3>(_currentStrokeUV);
+        var strokeBytes = DrawingDataConverter.ViewportPointsToByteArray(new List<Vector3>(_currentStrokeUV));
+        registry.Rpc_SyncDrawingStroke(strokeBytes, chainLink, originSlot,
+            (byte)(currentColor.r * 255),
+            (byte)(currentColor.g * 255),
+            (byte)(currentColor.b * 255));
         _currentStrokeUV.Clear();
-
-        byte cr = (byte)(currentColor.r * 255);
-        byte cg = (byte)(currentColor.g * 255);
-        byte cb = (byte)(currentColor.b * 255);
-
-        // Giới hạn payload RPC của Fusion ~512 byte; mỗi điểm = 4 byte + 2 byte header.
-        // Chia nét dài thành nhiều RPC ≤100 điểm (~402 byte), overlap 1 điểm để nét không bị đứt.
-        const int MaxPointsPerChunk = 100;
-        int i = 0;
-        while (i < allPoints.Count)
-        {
-            int end = Mathf.Min(i + MaxPointsPerChunk, allPoints.Count);
-            var chunk = allPoints.GetRange(i, end - i);
-            var strokeBytes = DrawingDataConverter.ViewportPointsToByteArray(chunk);
-            registry.Rpc_SyncDrawingStroke(strokeBytes, chainLink, originSlot, cr, cg, cb);
-            if (end >= allPoints.Count) break;
-            i = end - 1; // overlap điểm cuối làm điểm đầu chunk kế
-        }
     }
     bool IsMouseOverDrawingArea()
     {
@@ -408,64 +357,5 @@ public class DrawingManager : MonoBehaviour
         texture.Apply();
         drawingCanvas.texture = texture;
         isDrawing = false;
-    }
-
-    public bool HasTexture => texture != null;
-
-    public byte[] EncodeAsPng()
-    {
-        if (texture == null) return null;
-        return texture.EncodeToPNG();
-    }
-
-    public void ApplyPng(byte[] png)
-    {
-        if (png == null || png.Length == 0) return;
-        if (texture == null) return;
-        var tmp = new Texture2D(2, 2);
-        if (!tmp.LoadImage(png)) { Destroy(tmp); return; }
-
-        if (tmp.width == textureWidth && tmp.height == textureHeight)
-        {
-            texture.SetPixels(tmp.GetPixels());
-        }
-        else
-        {
-            var resampled = ResamplePixels(tmp, textureWidth, textureHeight);
-            texture.SetPixels(resampled);
-        }
-        texture.Apply();
-        drawingCanvas.texture = texture;
-        undoStack.Clear();
-        redoStack.Clear();
-        Destroy(tmp);
-    }
-
-    public void ResetCanvas()
-    {
-        if (texture == null) return;
-        texture.SetPixels(clearColors);
-        texture.Apply();
-        drawingCanvas.texture = texture;
-        undoStack.Clear();
-        redoStack.Clear();
-        lastPos = null;
-        isDrawing = false;
-    }
-
-    private static Color[] ResamplePixels(Texture2D source, int targetW, int targetH)
-    {
-        var src = source.GetPixels();
-        var dst = new Color[targetW * targetH];
-        for (int y = 0; y < targetH; y++)
-        {
-            int sy = Mathf.Clamp((int)((y + 0.5f) * source.height / targetH), 0, source.height - 1);
-            for (int x = 0; x < targetW; x++)
-            {
-                int sx = Mathf.Clamp((int)((x + 0.5f) * source.width / targetW), 0, source.width - 1);
-                dst[y * targetW + x] = src[sy * source.width + sx];
-            }
-        }
-        return dst;
     }
 }

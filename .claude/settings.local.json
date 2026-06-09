@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell($unityExe = \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.2.2f1\\\\Editor\\\\Unity.exe\"; if \\(Test-Path $unityExe\\) { \"$unityExe FOUND\" } else { \"NOT FOUND\" })"
-    ]
-  }
-}

@@ -1,7 +1,5 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem.UI;
 using InkEcho.Network.Phases;
 using InkEcho.Network.Core;
 
@@ -17,26 +15,6 @@ public class PhaseSceneController : MonoBehaviour
         _loggedAlive = false;
         Debug.Log($"[PhaseSceneController] OnEnable on GameObject '{gameObject.name}' (scene: {gameObject.scene.name})");
     }
-    void Awake()
-    {
-        // BasePhase và các scene UI_* (load additive) không có EventSystem nào.
-        // EventSystem duy nhất nằm ở scene lobby đã bị huỷ khi LoadScene(Single) sang BasePhase,
-        // khiến mọi Button/Toggle/InputField không nhận được click trong suốt gameplay.
-        // Tạo một EventSystem cho gameplay nếu chưa có (sẽ tự bị huỷ khi BasePhase unload sang ResultScene,
-        // nơi đã có EventSystem riêng — nên không gây trùng).
-        EnsureEventSystem();
-    }
-
-    private static void EnsureEventSystem()
-    {
-        if (FindObjectOfType<EventSystem>() != null) return;
-
-        var go = new GameObject("EventSystem (gameplay-auto)");
-        go.AddComponent<EventSystem>();
-        go.AddComponent<InputSystemUIInputModule>();
-        Debug.Log("[PhaseSceneController] No EventSystem in gameplay scenes — created one so UI buttons work.");
-    }
-
     void Update()
     {
         if (!_loggedAlive)
@@ -75,16 +53,8 @@ public class PhaseSceneController : MonoBehaviour
 
         var modeConfig = manager.GetActiveModeConfig();
         Debug.Log($"[PhaseSceneController] SwitchPhaseScene: newPhase={newPhase}, ActiveMode={manager.ActiveMode}, modeConfig={(modeConfig == null ? "NULL" : modeConfig.name)}");
-        string sceneToLoad = null;
 
         if (modeConfig != null)
-            sceneToLoad = modeConfig.GetSceneNameForPhase(newPhase);
-
-        // Fallback: nếu ModeConfig chưa assign hoặc trả empty, dùng default scene names
-        if (string.IsNullOrEmpty(sceneToLoad))
-            sceneToLoad = GetDefaultSceneForPhase(newPhase);
-
-        if (!string.IsNullOrEmpty(sceneToLoad))
         {
             string sceneToLoad = modeConfig.GetSceneNameForPhase(newPhase);
             Debug.Log($"[PhaseSceneController] sceneToLoad resolved to: \"{sceneToLoad}\"");
@@ -95,27 +65,6 @@ public class PhaseSceneController : MonoBehaviour
                 _currentLoadedScene = sceneToLoad;
                 Debug.Log($"[PhaseSceneController] Loading scene additively: {sceneToLoad}");
             }
-            Debug.Log($"[PhaseSceneController] Loading phase scene: {sceneToLoad} for phase {newPhase}");
-            SceneManager.LoadSceneAsync(sceneToLoad, LoadSceneMode.Additive);
-            _currentLoadedScene = sceneToLoad;
-        }
-        else
-        {
-            Debug.LogWarning($"[PhaseSceneController] No scene mapped for phase {newPhase}");
-        }
-    }
-
-    private static string GetDefaultSceneForPhase(PhaseType phase)
-    {
-        switch (phase)
-        {
-            case PhaseType.Prompt:     return "UI_Prompt";
-            case PhaseType.Draw:       return "UI_Draw";
-            case PhaseType.Guess:      return "UI_Guess";
-            case PhaseType.Observe:    return "UI_Observe";
-            case PhaseType.FinalGuess: return "UI_FinalGuess";
-            case PhaseType.Reveal:     return "UI_Reveal";
-            default:                   return null;
         }
     }
 }
