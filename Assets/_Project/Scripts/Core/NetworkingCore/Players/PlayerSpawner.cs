@@ -85,12 +85,24 @@ namespace InkEcho.Network.Players
                 Debug.LogError($"[PlayerSpawner] {label} prefab not assigned");
                 return;
             }
-            var instance = runner.Spawn(prefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
+            NetworkObject instance = null;
+            try
+            {
+                instance = runner.Spawn(prefab, Vector3.zero, Quaternion.identity, runner.LocalPlayer);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[PlayerSpawner] Spawn({label}) threw: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            }
             if (instance != null)
             {
                 runner.MakeDontDestroyOnLoad(instance.gameObject);
+                Debug.Log($"[PlayerSpawner] Spawned {label} (master)");
             }
-            Debug.Log($"[PlayerSpawner] Spawned {label} (master)");
+            else
+            {
+                Debug.LogError($"[PlayerSpawner] runner.Spawn returned NULL for {label} (prefab={prefab.name})");
+            }
         }
     }
 }

@@ -57,8 +57,9 @@ namespace InkEcho.Network.Players
 
             var text = CurrentText;
             if (string.IsNullOrWhiteSpace(text)) text = fallbackText;
+            if (text.Length > 60) text = text.Substring(0, 60);
 
-            albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, new NetworkString<_128>(text), assignment.PairRole);
+            albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, new NetworkString<_64>(text), assignment.PairRole);
             _hasSubmitted = true;
 
             if (inputField != null) inputField.interactable = false;

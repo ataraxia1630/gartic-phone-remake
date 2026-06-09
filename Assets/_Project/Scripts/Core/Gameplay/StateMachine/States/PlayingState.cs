@@ -25,8 +25,8 @@ namespace InkEcho.Network.StateMachine.States
                 Debug.LogWarning("[PlayingState] PhaseManager not found, cannot start game phases");
             }
 
-            // If DrawingTest is already active, start immediately.
-            if (SceneManager.GetActiveScene().name == "DrawingTest")
+            // If BasePhase is already active, start immediately.
+            if (SceneManager.GetActiveScene().name == "BasePhase")
             {
                 phaseManager?.StartGame(machine.SelectedMode);
                 return;
@@ -54,8 +54,8 @@ namespace InkEcho.Network.StateMachine.States
             {
                 if (machine.Runner != null)
                 {
-                    machine.Runner.LoadScene("DrawingTest", UnityEngine.SceneManagement.LoadSceneMode.Single, UnityEngine.SceneManagement.LocalPhysicsMode.None, true);
-                    Debug.Log("[GameState] DrawingTest scene triggered ");
+                    machine.Runner.LoadScene("BasePhase", UnityEngine.SceneManagement.LoadSceneMode.Single, UnityEngine.SceneManagement.LocalPhysicsMode.None, true);
+                    Debug.Log("[GameState] BasePhase scene triggered ");
                 }
             }
             catch (System.Exception ex)

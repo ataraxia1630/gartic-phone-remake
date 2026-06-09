@@ -10,7 +10,7 @@ namespace InkEcho.Gameplay.UI
     /// Attach to a dedicated panel in UI_Draw.unity (separate from PromptPanel/UIContentController).
     /// Persistently shows the original prompt only during the very first Draw round (ChainLinkIndex == 1),
     /// where the worker draws directly from a prompt written in the Prompt phase. Later Draw rounds
-    /// draw from a guess written by the previous worker, so the panel stays hidden there.    
+    /// draw from a guess written by the previous worker, so the panel stays hidden there.
     /// </summary>
     public class DrawPromptDisplay : MonoBehaviour
     {
@@ -31,7 +31,25 @@ namespace InkEcho.Gameplay.UI
         private void OnDisable()
         {
             _shown = false;
-            if (panel != null) panel.SetActive(false);
+            SetPanelVisible(false);
+        }
+
+        /// <summary>
+        /// Toggles panel visibility without ever disabling the GameObject this script lives on —
+        /// doing so would disable this MonoBehaviour too and permanently stop Update() from running,
+        /// since nothing outside this component would be left to re-enable it.
+        /// </summary>
+        private void SetPanelVisible(bool visible)
+        {
+            if (panel == null) return;
+
+            if (panel == gameObject)
+            {
+                if (promptLabel != null) promptLabel.gameObject.SetActive(visible);
+                return;
+            }
+
+            panel.SetActive(visible);
         }
 
         private void Update()
@@ -46,7 +64,7 @@ namespace InkEcho.Gameplay.UI
                 if (_shown)
                 {
                     _shown = false;
-                    if (panel != null) panel.SetActive(false);
+                    SetPanelVisible(false);
                 }
                 return;
             }
@@ -56,9 +74,11 @@ namespace InkEcho.Gameplay.UI
             if (_shown && assignment.ChainLinkIndex == _shownChainLink && assignment.AlbumOriginSlotIndex == _shownOriginSlot)
                 return;
 
+            // Only the first Draw round (chain link 1) draws from an original prompt (chain link 0).
+            // Later Draw rounds draw from a guess written by the previous worker — keep panel hidden.
             if (assignment.ChainLinkIndex != 1)
             {
-                if (panel != null) panel.SetActive(false);
+                SetPanelVisible(false);
                 _shown = true;
                 _shownChainLink = assignment.ChainLinkIndex;
                 _shownOriginSlot = assignment.AlbumOriginSlotIndex;
@@ -68,10 +88,13 @@ namespace InkEcho.Gameplay.UI
             var entry = album.GetEntry(0, assignment.AlbumOriginSlotIndex);
             var promptText = entry.Prompt.ToString();
 
-            if (string.IsNullOrEmpty(promptText)) return; // retry next frame until synced
+            // The submitted prompt may not have synced from the state authority yet when this
+            // Draw round starts — keep retrying each frame until real text arrives instead of
+            // latching onto an empty string forever.
+            if (string.IsNullOrEmpty(promptText)) return;
 
             if (promptLabel != null) promptLabel.text = promptText;
-            if (panel != null) panel.SetActive(true);
+            SetPanelVisible(true);
 
             _shown = true;
             _shownChainLink = assignment.ChainLinkIndex;

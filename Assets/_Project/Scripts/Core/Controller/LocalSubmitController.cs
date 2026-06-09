@@ -26,6 +26,8 @@ public class LocalSubmitController : MonoBehaviour
             float timeLeft = phaseManager.PhaseTimer.RemainingTime(phaseManager.Runner).GetValueOrDefault();
             if (timeLeft <= 0.1f && !_hasSubmittedThisPhase)
             {
+                Debug.Log($"[LocalSubmit] Auto-trigger from Update: phase={phaseManager.CurrentPhase}, timeLeft={timeLeft}");
+
                 ForceSubmitCurrentWork();
             }
         }
@@ -33,14 +35,23 @@ public class LocalSubmitController : MonoBehaviour
 
     public void ForceSubmitCurrentWork()
     {
+        Debug.Log($"[LocalSubmit] ForceSubmitCurrentWork called: _hasSubmittedThisPhase={_hasSubmittedThisPhase}");
+
         if (_hasSubmittedThisPhase) return;
         _hasSubmittedThisPhase = true;
 
         var phaseManager = ServiceLocator.Get<PhaseManager>();
         var albumStore = ServiceLocator.Get<AlbumStore>();
+        Debug.Log($"[LocalSubmit] phaseManager={(phaseManager == null ? "NULL" : "OK")}, albumStore={(albumStore == null ? "NULL" : "OK")}");
+
         if (phaseManager == null || albumStore == null) return;
 
-        if (phaseManager.TryGetAssignment(phaseManager.Runner.LocalPlayer, out var assignment))
+        var localPlayer = phaseManager.Runner.LocalPlayer;
+        bool gotAssignment = phaseManager.TryGetAssignment(localPlayer, out var assignment);
+        Debug.Log($"[LocalSubmit] LocalPlayer={localPlayer}, CurrentPhase={phaseManager.CurrentPhase}, TryGetAssignment={gotAssignment}" +
+                  (gotAssignment ? $", Worker={assignment.Worker}, AlbumOriginSlotIndex={assignment.AlbumOriginSlotIndex}, PairRole={assignment.PairRole}, ChainLinkIndex={assignment.ChainLinkIndex}" : ""));
+
+        if (gotAssignment)
         {
             switch (phaseManager.CurrentPhase)
             {
@@ -51,7 +62,7 @@ public class LocalSubmitController : MonoBehaviour
                     }
                     else
                     {
-                        albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, new NetworkString<_128>("Time's up prompt!"), assignment.PairRole);
+                        albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, new NetworkString<_64>("Time's up prompt!"), assignment.PairRole);
                     }
                     break;
 

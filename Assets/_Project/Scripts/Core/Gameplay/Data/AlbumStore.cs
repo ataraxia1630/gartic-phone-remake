@@ -19,11 +19,15 @@ namespace InkEcho.Network.Data
 
         public override void Spawned()
         {
+            Debug.Log($"[AlbumStore] Spawned (Id={Object?.Id}, HasStateAuthority={HasStateAuthority})");
+
             ServiceLocator.Register<AlbumStore>(this);
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
         {
+            Debug.Log($"[AlbumStore] Despawned (Id={Object?.Id})");
+
             ServiceLocator.Unregister<AlbumStore>(this);
         }
 
@@ -46,7 +50,7 @@ namespace InkEcho.Network.Data
         private int IndexOf(int chainLink, int originSlot) => chainLink * PlayerCount + originSlot;
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_128> prompt, byte roleIndex, RpcInfo info = default)
+        public void Rpc_SubmitPrompt(byte originSlot, NetworkString<_64> prompt, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
             var pm = ServiceLocator.Get<Phases.PhaseManager>();
@@ -63,11 +67,11 @@ namespace InkEcho.Network.Data
 
             if (roleIndex == 1) 
             {
-                entry.Prompt = new NetworkString<_128>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
+                entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
             }
             else
             {
-                entry.Prompt = new NetworkString<_128>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
+                entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
             }
 
             entry.OriginPlayer = player;
@@ -100,7 +104,7 @@ namespace InkEcho.Network.Data
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_64> guess, byte roleIndex, RpcInfo info = default)
+        public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_16> guess, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
             var player = info.Source;
