@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Fusion;
 using InkEcho.Network.Core;
+using InkEcho.Network.Data;
 using InkEcho.Network.GameModes;
 using InkEcho.Network.Players;
 using InkEcho.Network.StateMachine.States;
@@ -14,6 +15,7 @@ namespace InkEcho.Network.StateMachine
         [Networked] public GameModeType SelectedMode { get; set; }
 
         [Networked] public byte RevealAlbumIndex { get; set; }
+        [Networked] public byte RevealLinkIndex { get; set; }
         [Networked] public TickTimer ResultsTimer { get; set; }
         [Networked] public NetworkBool IsRevealFinished { get; set; }
 
@@ -103,6 +105,38 @@ namespace InkEcho.Network.StateMachine
             if (!HasStateAuthority) return;
             if (CurrentState != GameStateType.Lobby) return;
             SelectedMode = mode;
+        }
+
+        // Host gọi khi nhấn "Next" trong RevealAlbumPanel — advance từng link rồi từng album.
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void Rpc_RevealNext(RpcInfo info = default)
+        {
+            if (!HasStateAuthority) return;
+            if (CurrentState != GameStateType.Results) return;
+
+            var album = ServiceLocator.Get<AlbumStore>();
+            if (album == null) return;
+
+            byte totalLinks = album.LinksPerChain;
+            if (totalLinks == 0) return;
+
+            byte nextLink = (byte)(RevealLinkIndex + 1);
+            if (nextLink < totalLinks)
+            {
+                RevealLinkIndex = nextLink;
+                return;
+            }
+
+            byte nextAlbum = (byte)(RevealAlbumIndex + 1);
+            if (nextAlbum < album.PlayerCount)
+            {
+                RevealAlbumIndex = nextAlbum;
+                RevealLinkIndex = 0;
+            }
+            else
+            {
+                IsRevealFinished = true;
+            }
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]

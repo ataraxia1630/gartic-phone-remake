@@ -14,6 +14,7 @@ namespace InkEcho.Network.Players
         private bool _registered;
         private bool _readyApplied;
         private bool _localReady;
+        private string _localDisplayName;
 
         public override void Spawned()
         {
@@ -21,12 +22,15 @@ namespace InkEcho.Network.Players
             {
                 Local = this;
                 ServiceLocator.Register<NetworkPlayer>(this);
-            }
-            if (HasStateAuthority)
-            {
+
                 var nickname = PlayerPrefs.GetString("gartic_nickname", $"Player{Object.InputAuthority.PlayerId}");
                 if (string.IsNullOrWhiteSpace(nickname)) nickname = $"Player{Object.InputAuthority.PlayerId}";
-                DisplayName = nickname.Length > 16 ? nickname.Substring(0, 16) : nickname;
+                _localDisplayName = nickname.Length > 16 ? nickname.Substring(0, 16) : nickname;
+            }
+
+            if (HasStateAuthority && HasInputAuthority)
+            {
+                DisplayName = _localDisplayName;
             }
         }
 
@@ -48,7 +52,9 @@ namespace InkEcho.Network.Players
                 var registry = ServiceLocator.Get<PlayerRegistry>();
                 if (registry != null)
                 {
-                    registry.Rpc_RegisterPlayer(DisplayName);
+                    if (string.IsNullOrWhiteSpace(_localDisplayName))
+                        _localDisplayName = $"Player{Object.InputAuthority.PlayerId}";
+                    registry.Rpc_RegisterPlayer(new NetworkString<_16>(_localDisplayName));
                     _registered = true;
                 }
             }

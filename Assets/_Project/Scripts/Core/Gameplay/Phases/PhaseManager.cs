@@ -15,6 +15,7 @@ namespace InkEcho.Network.Phases
         [Networked] public byte RoundIndex { get; set; }
         [Networked] public byte TotalRounds { get; set; }
         [Networked] public byte RevealAlbumIndex { get; set; }
+        [Networked] public byte RevealLinkIndex { get; set; }
         [Networked] public GameModeType ActiveMode { get; set; }
         [Networked] public NetworkBool IsGameFinished { get; set; }
         [Networked, Capacity(PlayerRegistry.MaxPlayers)]
@@ -60,10 +61,17 @@ namespace InkEcho.Network.Phases
             TotalRounds = (byte)_mode.CalculateTotalRounds(playerCount);
             RoundIndex = 0;
             RevealAlbumIndex = 0;
+            RevealLinkIndex = 0;
             IsGameFinished = false;
 
-            // initialize album store
+            // initialize album store — fallback FindObjectOfType nếu ServiceLocator bị null sau scene load
             var album = ServiceLocator.Get<Data.AlbumStore>();
+            if (album == null)
+            {
+                album = UnityEngine.Object.FindObjectOfType<Data.AlbumStore>();
+                if (album != null) ServiceLocator.Register<Data.AlbumStore>(album);
+                else Debug.LogWarning("[PhaseManager] AlbumStore không tìm thấy — PlayerCount sẽ là 0.");
+            }
             album?.Init(playerCount);
 
             CurrentPhase = PhaseType.Prompt;
@@ -80,6 +88,7 @@ namespace InkEcho.Network.Phases
             RoundIndex = 0;
             TotalRounds = 0;
             RevealAlbumIndex = 0;
+            RevealLinkIndex = 0;
             IsGameFinished = false;
             PlayOrderCount = 0;
             _currentStrategy = null;
@@ -131,6 +140,41 @@ namespace InkEcho.Network.Phases
             RevealAlbumIndex = index;
         }
 
+        public void SetRevealLinkIndex(byte index)
+        {
+            if (!HasStateAuthority) return;
+            RevealLinkIndex = index;
+        }
+
+        // Host UI calls this to reveal the next link, or advance to the next album when all links are shown.
+        public void RevealNext()
+        {
+            if (!HasStateAuthority) return;
+            var album = ServiceLocator.Get<Data.AlbumStore>();
+            if (album == null) return;
+
+            byte totalLinks = album.LinksPerChain;
+            if (totalLinks == 0) return;
+
+            byte nextLink = (byte)(RevealLinkIndex + 1);
+            if (nextLink < totalLinks)
+            {
+                RevealLinkIndex = nextLink;
+                return;
+            }
+
+            byte nextAlbum = (byte)(RevealAlbumIndex + 1);
+            if (nextAlbum < album.PlayerCount)
+            {
+                RevealAlbumIndex = nextAlbum;
+                RevealLinkIndex = 0;
+            }
+            else
+            {
+                AdvancePhase();
+            }
+        }
+
         public void AdvancePhase()
         {
             if (!HasStateAuthority) return;
@@ -152,12 +196,8 @@ namespace InkEcho.Network.Phases
             RoundIndex = nextRound;
             CurrentPhase = _mode.GetPhaseForRound(nextRound, TotalRounds);
 
-            if (CurrentPhase == PhaseType.Draw || CurrentPhase == PhaseType.Guess || CurrentPhase == PhaseType.Prompt)
-            {
-                var ordered = ServiceLocator.Get<PlayerRegistry>()?.GetOrderedPlayers() ?? new List<PlayerRef>();
-                _assignments = _mode.BuildAssignments(RoundIndex, ordered);
-            }
-
+            // Assignments được rebuild lazy bởi RefreshAssignments() (đọc shuffled play order),
+            // không eager build ở đây để tránh dùng nhầm slot-order.
             InstallStrategyFor(CurrentPhase);
         }
 

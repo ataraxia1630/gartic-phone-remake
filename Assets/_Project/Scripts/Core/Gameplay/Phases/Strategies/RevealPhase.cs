@@ -1,6 +1,5 @@
-using Fusion;
 using InkEcho.Network.Core;
-using InkEcho.Network.Data;
+using InkEcho.Network.Players;
 using UnityEngine;
 
 namespace InkEcho.Network.Phases.Strategies
@@ -12,32 +11,20 @@ namespace InkEcho.Network.Phases.Strategies
         public override void OnEnter(PhaseManager manager)
         {
             manager.SetRevealAlbumIndex(0);
-            ResetTimer(manager);
-            Debug.Log("[Phase] Reveal entered");
-        }
+            manager.SetRevealLinkIndex(0);
 
-        public override void Tick(PhaseManager manager)
-        {
-            if (!manager.PhaseTimer.Expired(manager.Runner)) return;
-
-            var album = ServiceLocator.Get<AlbumStore>();
-            var totalAlbums = album != null ? album.PlayerCount : (byte)0;
-            var nextIndex = (byte)(manager.RevealAlbumIndex + 1);
-
-            if (totalAlbums == 0 || nextIndex >= totalAlbums)
+            // Host yêu cầu tất cả client gửi lại tranh của họ để đảm bảo DrawingTextureStore đầy đủ.
+            if (manager.HasStateAuthority)
             {
-                manager.AdvancePhase();
-                return;
+                var registry = ServiceLocator.Get<PlayerRegistry>();
+                registry?.Rpc_RequestRebroadcastToHost(manager.Runner.LocalPlayer);
+                Debug.Log("[Phase] Reveal — requested drawing re-broadcast from all clients");
             }
 
-            manager.SetRevealAlbumIndex(nextIndex);
-            ResetTimer(manager);
+            Debug.Log("[Phase] Reveal — host clicks Next to reveal links step by step");
         }
 
-        private void ResetTimer(PhaseManager manager)
-        {
-            var seconds = manager.ResolveDuration(PhaseType.Reveal);
-            if (seconds > 0f) manager.PhaseTimer = TickTimer.CreateFromSeconds(manager.Runner, seconds);
-        }
+        // Host drives reveal manually via PhaseManager.RevealNext(). Nothing to tick.
+        public override void Tick(PhaseManager manager) { }
     }
 }

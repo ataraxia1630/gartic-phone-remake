@@ -1,5 +1,9 @@
+using System.Collections;
 using Fusion;
 using InkEcho.Network.Core;
+using InkEcho.Network.Data;
+using InkEcho.Network.Phases;
+using InkEcho.Network.StateMachine;
 using UnityEngine;
 
 namespace InkEcho.Network.Players
@@ -28,6 +32,7 @@ namespace InkEcho.Network.Players
                 return;
             }
             _bootstrap.OnPlayerJoinedEvent += HandlePlayerJoined;
+            _bootstrap.OnPlayerLeftEvent += HandlePlayerLeft;
             _bootstrap.OnShutdownEvent += HandleShutdown;
         }
 
@@ -35,6 +40,7 @@ namespace InkEcho.Network.Players
         {
             if (_bootstrap == null) return;
             _bootstrap.OnPlayerJoinedEvent -= HandlePlayerJoined;
+            _bootstrap.OnPlayerLeftEvent -= HandlePlayerLeft;
             _bootstrap.OnShutdownEvent -= HandleShutdown;
         }
 
@@ -42,6 +48,29 @@ namespace InkEcho.Network.Players
         {
             _localPlayerSpawned = false;
             _singletonsSpawned = false;
+        }
+
+        private void HandlePlayerLeft(PlayerRef _)
+        {
+            StartCoroutine(TryRespawnSingletonsAfterDelay());
+        }
+
+        private IEnumerator TryRespawnSingletonsAfterDelay()
+        {
+            yield return null;
+            yield return null;
+            var runner = _bootstrap?.Runner;
+            if (runner == null || !runner.IsRunning || !runner.IsSharedModeMasterClient) yield break;
+
+            _singletonsSpawned = true;
+            if (ServiceLocator.Get<PlayerRegistry>() == null)
+                EnsureSingleton(runner, playerRegistryPrefab, "PlayerRegistry");
+            if (ServiceLocator.Get<GameStateMachine>() == null)
+                EnsureSingleton(runner, gameStateMachinePrefab, "GameStateMachine");
+            if (ServiceLocator.Get<PhaseManager>() == null)
+                EnsureSingleton(runner, phaseManagerPrefab, "PhaseManager");
+            if (ServiceLocator.Get<AlbumStore>() == null)
+                EnsureSingleton(runner, albumStorePrefab, "AlbumStore");
         }
 
         private void HandlePlayerJoined(PlayerRef player)
