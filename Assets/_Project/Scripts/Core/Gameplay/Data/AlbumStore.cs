@@ -62,22 +62,15 @@ namespace InkEcho.Network.Data
             var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
 
-            //string currentText = entry.Prompt.ToString();
-            //string newText = prompt.ToString();
+            string existing = entry.Prompt.ToString();
+            if (roleIndex == 0 || string.IsNullOrEmpty(existing))
+            {
+                entry.Prompt = prompt;
+                entry.OriginPlayer = player;
+                Entries.Set(idx, entry);
+            }
 
-            //if (roleIndex == 1) 
-            //{
-            //    entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
-            //}
-            //else
-            //{
-            //    entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
-            //}
-            entry.Prompt = prompt;
-            entry.OriginPlayer = player;
-            Entries.Set(idx, entry);
-
-            Debug.Log($"[AlbumStore] Rpc_SubmitPrompt: chainLink={assignment.ChainLinkIndex}, idx={idx}, originSlot={originSlot}, text=\"{entry.Prompt}\"");
+            Debug.Log($"[AlbumStore] Rpc_SubmitPrompt: role={roleIndex}, chainLink={assignment.ChainLinkIndex}, originSlot={originSlot}, text=\"{entry.Prompt}\"");
 
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.SetSubmittedPhase(player, true);
@@ -97,8 +90,10 @@ namespace InkEcho.Network.Data
             var entry = Entries.Get(idx);
             entry.DrawingHash = hash;
             entry.DrawingStrokes = strokes;
-            entry.WorkerPlayer = player;
-            Entries.Set(idx, entry);
+            if (assignment.PairRole == 0)
+                entry.WorkerPlayer = player;
+            else
+                entry.WorkerPlayer2 = player; Entries.Set(idx, entry);
 
             ServiceLocator.Get<PlayerRegistry>()?.SetSubmittedPhase(player, true);
         }
@@ -113,7 +108,9 @@ namespace InkEcho.Network.Data
             if (!pm.TryGetAssignment(player, out var assignment)) return;
             if (assignment.AlbumOriginSlotIndex != originSlot) return;
 
-            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
+            // FinalGuess luôn lưu ở link cuối cùng (LinksPerChain - 1).
+            byte finalLink = (byte)(LinksPerChain - 1);
+            var idx = IndexOf(finalLink, originSlot);
             var entry = Entries.Get(idx);
 
             // Param vẫn là NetworkString<_64> để không phá vỡ caller; lưu xuống field _32 (cắt bớt nếu quá dài).
@@ -128,6 +125,7 @@ namespace InkEcho.Network.Data
 
             entry.WorkerPlayer = player; // LƯU LẠI TÁC GIẢ ĐỂ REVEAL KHÔNG BỊ TRỐNG
             Entries.Set(idx, entry);
+            Debug.Log($"[AlbumStore] Rpc_SubmitFinalGuess: role={roleIndex}, finalLink={finalLink}, originSlot={originSlot}, guess=\"{guess}\"");
 
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.SetSubmittedPhase(player, true);
@@ -161,7 +159,7 @@ namespace InkEcho.Network.Data
                 for (byte link = 0; link < LinksPerChain; link++)
                 {
                     var entry = GetEntry(link, chain);
-                    Debug.Log($"   Link {link}: Worker={entry.WorkerPlayer}, Prompt='{entry.Prompt}', Guess0='{entry.GuessRole0}', Guess1='{entry.GuessRole1}', Strokes={entry.DrawingStrokes}");
+                    Debug.Log($"   Link {link}: Worker={entry.WorkerPlayer}, Worker2={entry.WorkerPlayer2}, Prompt='{entry.Prompt}', Guess0='{entry.GuessRole0}', Guess1='{entry.GuessRole1}', Strokes={entry.DrawingStrokes}");
                 }
             }
         }

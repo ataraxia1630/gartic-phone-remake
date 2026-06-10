@@ -79,35 +79,18 @@ public class LocalSubmitController : MonoBehaviour
                     break;
 
                 case PhaseType.Draw:
-                    // TODO: Đóng gói hình ảnh
-                    ulong imageHash = 12345UL; // Demo
-                    ushort strokes = 10;       // Demo
-                    albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, imageHash, strokes);
+                    albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 1);
                     break;
 
-                case PhaseType.Guess:
-                    // TODO: Lấy string từ Input Field
-                    string guessText = "Time's up guess!";
-                    //albumStore.Rpc_SubmitGuess(assignment.AlbumOriginSlotIndex, guessText);
-                    break;
-            }
-            Debug.Log($"[LocalSubmit] Ép nộp bài thành công cho phase {phaseManager.CurrentPhase}");
-            switch (phaseManager.CurrentPhase)
-            {
                 case PhaseType.FinalGuess:
                     string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
                         ? finalGuessInput.text.Trim() : "(empty)";
                     albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, new NetworkString<_16>(guessText), assignment.PairRole);
                     break;
-
-                case PhaseType.Draw:
-                    // Ảnh PNG được broadcast riêng qua DrawingManager; truyền strokes=1 để Reveal nhận diện đây là bức tranh
-                    albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 1);
-                    break;
             }
             Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
         }
-        Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
+        Debug.Log($"[LocalSubmit] Đã nộp bài: phase={phaseManager.CurrentPhase}, originSlot={assignment.AlbumOriginSlotIndex}, link={assignment.ChainLinkIndex}");
     }
 
 }

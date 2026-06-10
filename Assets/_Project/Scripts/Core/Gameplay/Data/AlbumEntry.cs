@@ -8,6 +8,7 @@ namespace InkEcho.Network.Data
         public byte OriginSlotIndex;
         public PlayerRef OriginPlayer;
         public PlayerRef WorkerPlayer;
+        public PlayerRef WorkerPlayer2;
 
         public NetworkString<_64> Prompt;
         public ulong DrawingHash;
@@ -24,6 +25,7 @@ namespace InkEcho.Network.Data
                 OriginSlotIndex = origin,
                 OriginPlayer = owner,
                 WorkerPlayer = PlayerRef.None,
+                WorkerPlayer2 = PlayerRef.None,
                 Prompt = new NetworkString<_64>(""),
                 DrawingHash = 0UL,
                 DrawingStrokes = 0,

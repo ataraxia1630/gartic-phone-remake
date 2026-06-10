@@ -1,11 +1,12 @@
-using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
+using Fusion;
+using InkEcho.Gameplay.Data;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
-using InkEcho.Network.StateMachine;
 using InkEcho.Network.Players;
-using InkEcho.Gameplay.Data;
+using InkEcho.Network.StateMachine;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace InkEcho.UI
 {
@@ -22,6 +23,7 @@ namespace InkEcho.UI
         [SerializeField] private RawImage drawingImage;
         [SerializeField] private TextMeshProUGUI guessText;
         [SerializeField] private TextMeshProUGUI linkInfoText;
+        [SerializeField] private TextMeshProUGUI authorLabel;
 
         [Header("Panels")]
         [SerializeField] private GameObject promptPanel;
@@ -138,29 +140,64 @@ namespace InkEcho.UI
             {
                 // First link is always the original prompt
                 ShowPrompt(promptStr, "Original Prompt");
+                SetAuthorLabel(entry.OriginPlayer, PlayerRef.None);
             }
             else if (hasDrawing)
             {
                 // Show drawing
                 ShowDrawing(linkIndex, albumIndex);
+                SetAuthorLabel(entry.WorkerPlayer, entry.WorkerPlayer2);
             }
             else if (hasGuess)
             {
                 // Show guess
                 ShowGuess(guess0, guess1);
+                SetAuthorLabel(entry.WorkerPlayer, entry.WorkerPlayer2);
             }
             else if (hasPrompt)
             {
                 // Fallback to prompt if available
                 ShowPrompt(promptStr, "Prompt");
+                SetAuthorLabel(entry.OriginPlayer, PlayerRef.None);
             }
             else
             {
                 Debug.LogWarning($"[RevealAlbumController] No content for album={albumIndex}, link={linkIndex}");
+                if (authorLabel != null) authorLabel.text = "";
             }
 
             Debug.Log($"[RevealAlbumController] Displaying album={albumIndex}, link={linkIndex}, " +
                        $"prompt=\"{promptStr}\", hasDrawing={hasDrawing}, guess0=\"{guess0}\", guess1=\"{guess1}\"");
+        }
+        // Coop: hiện "Tên A + Tên B" khi cả 2 vai trò trong cặp đều đã submit.
+        // Sandwich: player2 luôn None → chỉ hiện 1 tên.
+        private void SetAuthorLabel(PlayerRef player1, PlayerRef player2)
+        {
+            if (authorLabel == null) return;
+
+            string name1 = ResolvePlayerName(player1);
+            string name2 = ResolvePlayerName(player2);
+
+            string combined;
+            if (!string.IsNullOrEmpty(name1) && !string.IsNullOrEmpty(name2))
+                combined = $"{name1} + {name2}";
+            else if (!string.IsNullOrEmpty(name1))
+                combined = name1;
+            else if (!string.IsNullOrEmpty(name2))
+                combined = name2;
+            else
+                combined = "";
+
+            authorLabel.text = string.IsNullOrEmpty(combined) ? "" : $"— {combined}";
+        }
+
+        private string ResolvePlayerName(PlayerRef player)
+        {
+            if (!player.IsRealPlayer) return "";
+            var registry = ServiceLocator.Get<PlayerRegistry>();
+            if (registry != null && registry.TryGetSlot(player, out var slot))
+                return slot.DisplayName.ToString();
+            return "";
         }
 
         private void ShowPrompt(string text, string label = "Prompt")
