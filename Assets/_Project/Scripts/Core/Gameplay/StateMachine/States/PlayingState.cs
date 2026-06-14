@@ -23,6 +23,12 @@ namespace InkEcho.Network.StateMachine.States
 
             if (SceneManager.GetActiveScene().name == GameSceneName)
             {
+                Debug.LogWarning("[PlayingState] PhaseManager not found, cannot start game phases");
+            }
+
+            // If BasePhase is already active, start immediately.
+            if (SceneManager.GetActiveScene().name == "BasePhase")
+            {
                 var pm = ResolvePhaseManager();
                 if (pm != null)
                     pm.StartGame(machine.SelectedMode);

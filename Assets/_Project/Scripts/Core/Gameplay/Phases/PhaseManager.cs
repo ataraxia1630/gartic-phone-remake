@@ -72,7 +72,7 @@ namespace InkEcho.Network.Phases
                 if (album != null) ServiceLocator.Register<Data.AlbumStore>(album);
                 else Debug.LogWarning("[PhaseManager] AlbumStore không tìm thấy — PlayerCount sẽ là 0.");
             }
-            album?.Init(playerCount);
+            album?.Init((byte)Mathf.Max(1, playerCount / Mathf.Max(1, _mode.PlayersPerSlot)));
 
             CurrentPhase = PhaseType.Prompt;
             InstallStrategyFor(CurrentPhase);

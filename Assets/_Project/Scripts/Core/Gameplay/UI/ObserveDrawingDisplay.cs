@@ -10,24 +10,23 @@ namespace InkEcho.Gameplay.UI
     {
         [SerializeField] private RawImage displayTarget;
 
-        private bool _rendered;
+        private Texture2D _shownTexture;
 
         private void OnEnable()
         {
-            _rendered = false;
+            _shownTexture = null;
             if (displayTarget == null)
                 displayTarget = GetComponentInChildren<RawImage>(true);
         }
 
         private void Update()
         {
-            if (!_rendered)
-                TryRender();
+            TryRender();
         }
 
         private void OnDisable()
         {
-            _rendered = false;
+            _shownTexture = null;
             if (displayTarget != null) displayTarget.texture = null;
         }
 
@@ -40,14 +39,15 @@ namespace InkEcho.Gameplay.UI
             if (!pm.TryGetAssignment(runner.LocalPlayer, out var assignment)) return;
 
             int prevLink = assignment.ChainLinkIndex - 1;
-            if (prevLink < 0) { _rendered = true; return; }
+            if (prevLink < 0) return;
 
             var tex = DrawingTextureStore.GetTexture(prevLink, assignment.AlbumOriginSlotIndex);
             if (tex == null) return; // poll next frame until texture arrives
+            if (tex == _shownTexture) return;
 
+            _shownTexture = tex;
             displayTarget.texture = tex;
             displayTarget.color = Color.white;
-            _rendered = true;
         }
     }
 }

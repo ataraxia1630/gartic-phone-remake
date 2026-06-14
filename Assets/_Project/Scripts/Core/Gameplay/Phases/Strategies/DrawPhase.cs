@@ -25,38 +25,11 @@ namespace InkEcho.Network.Phases.Strategies
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.ResetSubmittedFlags();
             Debug.Log("[Phase] Draw entered");
-
-            // NEW: Show previous prompt
-            if (manager.RoundIndex > 0)
-                ShowPreviousContent(manager);
-        }
-        private void ShowPreviousContent(PhaseManager manager)
-        {
-            var uiHelper = Object.FindObjectOfType<InkEcho.UI.PhaseUIHelper>();
-            if (uiHelper != null)
-            {
-                uiHelper.ShowPrompt(manager.RoundIndex - 1, manager.RevealAlbumIndex);
-                Debug.Log($"[DrawPhase] Showing prompt from round {manager.RoundIndex - 1}");
-            }
         }
 
         public override void Tick(PhaseManager manager)
         {
-            var registry = ServiceLocator.Get<PlayerRegistry>();
-            //if (registry != null && registry.AreAllConnectedSubmitted())
-            //{
-            //    manager.AdvancePhase();
-            //    return;
-            //}
-
-            //if (manager.PhaseTimer.Expired(manager.Runner)) manager.AdvancePhase();
-
-            bool allDone = registry != null && registry.AreAllConnectedSubmitted();
-
-            if (allDone || manager.PhaseTimer.Expired(manager.Runner))
-            {
-                manager.AdvancePhase();
-            }
+            if (manager.PhaseTimer.Expired(manager.Runner)) manager.AdvancePhase();
         }
     }
 }

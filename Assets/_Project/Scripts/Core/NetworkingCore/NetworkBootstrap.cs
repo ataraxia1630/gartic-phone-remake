@@ -1,4 +1,4 @@
-using Fusion;
+﻿using Fusion;
 using Fusion.Sockets;
 using InkEcho.Gameplay.Data;
 using InkEcho.Network.Data;
@@ -135,6 +135,8 @@ namespace InkEcho.Network.Core
             byte originSlot = data.Array[data.Offset + 2];
             var png = new byte[data.Count - 3];
             System.Array.Copy(data.Array, data.Offset + 3, png, 0, png.Length);
+            Debug.Log($"[OnReliableData] Nhận tranh từ player={player}: chainLink={chainLink}, originSlot={originSlot}, size={png.Length} bytes");
+
             DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
 
             // Fill missing author on host if the entry hasn't been assigned yet.

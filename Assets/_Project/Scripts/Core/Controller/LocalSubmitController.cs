@@ -2,6 +2,8 @@ using UnityEngine;
 using InkEcho.Network.Phases;
 using InkEcho.Network.Core;
 using InkEcho.Network.Data;
+using InkEcho.Network.Players;
+using Fusion;
 using TMPro;
 
 public class LocalSubmitController : MonoBehaviour
@@ -33,6 +35,8 @@ public class LocalSubmitController : MonoBehaviour
             float timeLeft = phaseManager.PhaseTimer.RemainingTime(phaseManager.Runner).GetValueOrDefault();
             if (timeLeft <= 0.1f && !_hasSubmittedThisPhase)
             {
+                Debug.Log($"[LocalSubmit] Auto-trigger from Update: phase={phaseManager.CurrentPhase}, timeLeft={timeLeft}");
+
                 ForceSubmitCurrentWork();
             }
         }
@@ -43,40 +47,50 @@ public class LocalSubmitController : MonoBehaviour
 
     public void ForceSubmitCurrentWork()
     {
+        Debug.Log($"[LocalSubmit] ForceSubmitCurrentWork called: _hasSubmittedThisPhase={_hasSubmittedThisPhase}");
+
         if (_hasSubmittedThisPhase) return;
         _hasSubmittedThisPhase = true;
 
         var phaseManager = ServiceLocator.Get<PhaseManager>();
         var albumStore = ServiceLocator.Get<AlbumStore>();
+        Debug.Log($"[LocalSubmit] phaseManager={(phaseManager == null ? "NULL" : "OK")}, albumStore={(albumStore == null ? "NULL" : "OK")}");
+
         if (phaseManager == null || albumStore == null) return;
 
-        if (!phaseManager.TryGetAssignment(phaseManager.Runner.LocalPlayer, out var assignment))
+        var localPlayer = phaseManager.Runner.LocalPlayer;
+        bool gotAssignment = phaseManager.TryGetAssignment(localPlayer, out var assignment);
+        Debug.Log($"[LocalSubmit] LocalPlayer={localPlayer}, CurrentPhase={phaseManager.CurrentPhase}, TryGetAssignment={gotAssignment}" +
+                  (gotAssignment ? $", Worker={assignment.Worker}, AlbumOriginSlotIndex={assignment.AlbumOriginSlotIndex}, PairRole={assignment.PairRole}, ChainLinkIndex={assignment.ChainLinkIndex}" : ""));
+
+        if (gotAssignment)
         {
-            Debug.Log($"[LocalSubmit] Local player không có assignment trong phase {phaseManager.CurrentPhase}, skip.");
-            return;
+            switch (phaseManager.CurrentPhase)
+            {
+                case PhaseType.Prompt:
+                    if (ServiceLocator.TryGet<PromptInputController>(out var promptInput))
+                    {
+                        promptInput.ForceSubmit("Time's up prompt!");
+                    }
+                    else
+                    {
+                        albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, new NetworkString<_64>("Time's up prompt!"), assignment.PairRole);
+                    }
+                    break;
+
+                case PhaseType.Draw:
+                    albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 1);
+                    break;
+
+                case PhaseType.FinalGuess:
+                    string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
+                        ? finalGuessInput.text.Trim() : "(empty)";
+                    albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, new NetworkString<_16>(guessText), assignment.PairRole);
+                    break;
+            }
+            Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
         }
-
-        switch (phaseManager.CurrentPhase)
-        {
-            case PhaseType.Prompt:
-                string promptText = promptInput != null && !string.IsNullOrWhiteSpace(promptInput.text)
-                    ? promptInput.text.Trim() : "(empty)";
-                albumStore.Rpc_SubmitPrompt(assignment.AlbumOriginSlotIndex, promptText, assignment.PairRole);
-                break;
-
-            case PhaseType.FinalGuess:
-                string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
-                    ? finalGuessInput.text.Trim() : "(empty)";
-                albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, guessText, assignment.PairRole);
-                break;
-
-            case PhaseType.Draw:
-                // Set WorkerPlayer cho entry (= người vẽ). Ảnh PNG được broadcast riêng qua DrawingManager
-                // Truyền strokes = 1 để đảm bảo khi Reveal, UI luôn nhận diện đây là một bức tranh (ngay cả khi mạng tải PNG hơi chậm)
-                albumStore.Rpc_SubmitDrawing(assignment.AlbumOriginSlotIndex, 0UL, 1);
-                break;
-        }
-        Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
+        Debug.Log($"[LocalSubmit] Đã nộp bài: phase={phaseManager.CurrentPhase}, originSlot={assignment.AlbumOriginSlotIndex}, link={assignment.ChainLinkIndex}");
     }
 
 }

@@ -175,10 +175,21 @@ namespace InkEcho.Network.Players
         public void Rpc_RequestRebroadcastToHost(PlayerRef host, RpcInfo info = default)
         {
             var runner = NetworkBootstrap.Instance?.Runner;
-            if (runner == null) return;
-            if (runner.LocalPlayer == host) return; // host tự có, khỏi gửi lại chính mình
+            if (runner == null) { Debug.LogWarning("[Rebroadcast] Runner null, bỏ qua"); return; }
 
-            foreach (var (chainLink, originSlot, png) in DrawingTextureStore.GetAllRawPngs())
+            bool isHost = runner.LocalPlayer == host;
+            var allPngs = new System.Collections.Generic.List<(byte, byte, byte[])>(DrawingTextureStore.GetAllRawPngs());
+            Debug.Log($"[Rebroadcast] RPC nhận: localPlayer={runner.LocalPlayer}, host={host}, isHost={isHost}, pngCount={allPngs.Count}");
+
+            if (isHost) return;
+
+            if (allPngs.Count == 0)
+            {
+                Debug.LogWarning("[Rebroadcast] Client không có PNG nào trong DrawingTextureStore để gửi!");
+                return;
+            }
+
+            foreach (var (chainLink, originSlot, png) in allPngs)
             {
                 var packet = new byte[png.Length + 3];
                 packet[0] = 0xDA;
@@ -188,7 +199,7 @@ namespace InkEcho.Network.Players
                 // Dùng key encode (chainLink, originSlot) để tránh collision khi gửi nhiều tranh liên tiếp
                 var key = ReliableKey.FromInts(0xDA, chainLink, originSlot, 0);
                 runner.SendReliableDataToPlayer(host, key, packet);
-                Debug.Log($"[PlayerRegistry] Re-broadcast drawing to host: chainLink={chainLink}, originSlot={originSlot}, size={png.Length}");
+                Debug.Log($"[Rebroadcast] Gửi tranh → host: chainLink={chainLink}, originSlot={originSlot}, size={png.Length} bytes");
             }
         }
     }

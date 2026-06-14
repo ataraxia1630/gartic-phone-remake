@@ -158,7 +158,19 @@ public class DrawingManager : MonoBehaviour
     {
         FlushCurrentStroke();
         if (_hasCachedAssignment)
-            BroadcastTexture(_cachedChainLink, _cachedOriginSlot);
+        {
+            // Coop: chỉ role 0 (người vẽ chính) broadcast tranh. Role 1 chỉ xem/hướng dẫn.
+            var runner = NetworkBootstrap.Instance?.Runner;
+            var pm = ServiceLocator.Get<PhaseManager>();
+            bool isSecondaryRole = false;
+            if (runner != null && pm != null && pm.TryGetAssignment(runner.LocalPlayer, out var a))
+                isSecondaryRole = a.PairRole == 1 && a.HasSecondary;
+
+            if (!isSecondaryRole)
+                BroadcastTexture(_cachedChainLink, _cachedOriginSlot);
+            else
+                Debug.Log($"[DrawingManager] Coop role 1 — bỏ qua broadcast tranh (chainLink={_cachedChainLink}, originSlot={_cachedOriginSlot})");
+        }
         _hasCachedAssignment = false;
     }
 

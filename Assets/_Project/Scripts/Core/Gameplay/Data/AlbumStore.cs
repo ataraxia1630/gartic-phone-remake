@@ -19,11 +19,15 @@ namespace InkEcho.Network.Data
 
         public override void Spawned()
         {
+            Debug.Log($"[AlbumStore] Spawned (Id={Object?.Id}, HasStateAuthority={HasStateAuthority})");
+
             ServiceLocator.Register<AlbumStore>(this);
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
         {
+            Debug.Log($"[AlbumStore] Despawned (Id={Object?.Id})");
+
             ServiceLocator.Unregister<AlbumStore>(this);
         }
 
@@ -58,20 +62,15 @@ namespace InkEcho.Network.Data
             var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
             var entry = Entries.Get(idx);
 
-            string currentText = entry.Prompt.ToString();
-            string newText = prompt.ToString();
-
-            if (roleIndex == 1)
+            string existing = entry.Prompt.ToString();
+            if (roleIndex == 0 || string.IsNullOrEmpty(existing))
             {
-                entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : currentText + " " + newText);
-            }
-            else
-            {
-                entry.Prompt = new NetworkString<_64>(string.IsNullOrEmpty(currentText) ? newText : newText + " " + currentText);
+                entry.Prompt = prompt;
+                entry.OriginPlayer = player;
+                Entries.Set(idx, entry);
             }
 
-            entry.OriginPlayer = player;
-            Entries.Set(idx, entry);
+            Debug.Log($"[AlbumStore] Rpc_SubmitPrompt: role={roleIndex}, chainLink={assignment.ChainLinkIndex}, originSlot={originSlot}, text=\"{entry.Prompt}\"");
 
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.SetSubmittedPhase(player, true);
@@ -91,14 +90,16 @@ namespace InkEcho.Network.Data
             var entry = Entries.Get(idx);
             entry.DrawingHash = hash;
             entry.DrawingStrokes = strokes;
-            entry.WorkerPlayer = player;
-            Entries.Set(idx, entry);
+            if (assignment.PairRole == 0)
+                entry.WorkerPlayer = player;
+            else
+                entry.WorkerPlayer2 = player; Entries.Set(idx, entry);
 
             ServiceLocator.Get<PlayerRegistry>()?.SetSubmittedPhase(player, true);
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_64> guess, byte roleIndex, RpcInfo info = default)
+        public void Rpc_SubmitFinalGuess(byte originSlot, NetworkString<_16> guess, byte roleIndex, RpcInfo info = default)
         {
             if (!HasStateAuthority) return;
             var pm = ServiceLocator.Get<Phases.PhaseManager>();
@@ -107,21 +108,24 @@ namespace InkEcho.Network.Data
             if (!pm.TryGetAssignment(player, out var assignment)) return;
             if (assignment.AlbumOriginSlotIndex != originSlot) return;
 
-            var idx = IndexOf(assignment.ChainLinkIndex, originSlot);
+            // FinalGuess luôn lưu ở link cuối cùng (LinksPerChain - 1).
+            byte finalLink = (byte)(LinksPerChain - 1);
+            var idx = IndexOf(finalLink, originSlot);
             var entry = Entries.Get(idx);
 
             // Param vẫn là NetworkString<_64> để không phá vỡ caller; lưu xuống field _32 (cắt bớt nếu quá dài).
             if (roleIndex == 0)
             {
-                entry.GuessRole0 = new NetworkString<_32>(guess.ToString());
+                entry.GuessRole0 = guess;
             }
             else if (roleIndex == 1)
             {
-                entry.GuessRole1 = new NetworkString<_32>(guess.ToString());
+                entry.GuessRole1 = guess;
             }
 
             entry.WorkerPlayer = player; // LƯU LẠI TÁC GIẢ ĐỂ REVEAL KHÔNG BỊ TRỐNG
             Entries.Set(idx, entry);
+            Debug.Log($"[AlbumStore] Rpc_SubmitFinalGuess: role={roleIndex}, finalLink={finalLink}, originSlot={originSlot}, guess=\"{guess}\"");
 
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.SetSubmittedPhase(player, true);
@@ -155,7 +159,7 @@ namespace InkEcho.Network.Data
                 for (byte link = 0; link < LinksPerChain; link++)
                 {
                     var entry = GetEntry(link, chain);
-                    Debug.Log($"   Link {link}: Worker={entry.WorkerPlayer}, Prompt='{entry.Prompt}', Guess0='{entry.GuessRole0}', Guess1='{entry.GuessRole1}', Strokes={entry.DrawingStrokes}");
+                    Debug.Log($"   Link {link}: Worker={entry.WorkerPlayer}, Worker2={entry.WorkerPlayer2}, Prompt='{entry.Prompt}', Guess0='{entry.GuessRole0}', Guess1='{entry.GuessRole1}', Strokes={entry.DrawingStrokes}");
                 }
             }
         }

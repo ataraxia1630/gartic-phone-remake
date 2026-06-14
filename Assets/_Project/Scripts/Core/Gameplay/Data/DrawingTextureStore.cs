@@ -18,7 +18,6 @@ namespace InkEcho.Gameplay.Data
                 Debug.LogWarning($"[DrawingTextureStore] Failed to decode PNG for chainLink={chainLink}, originSlot={originSlot}");
                 return;
             }
-            if (_textures.TryGetValue(key, out var old)) Object.Destroy(old);
             _textures[key] = tex;
             _rawPngs[key] = pngBytes;
             Debug.Log($"[DrawingTextureStore] Stored texture: chainLink={chainLink}, originSlot={originSlot}, size={pngBytes.Length} bytes");
