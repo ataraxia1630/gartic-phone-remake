@@ -74,7 +74,7 @@ namespace InkEcho.Hoai.UI
             // fallback FindObjectOfType + re-register, giống PhaseManager.StartGame.
             var gsm = Resolve<GameStateMachine>();
             var album = Resolve<AlbumStore>();
-            if (gsm == null || album == null)
+            if (gsm == null || album == null || !gsm.Object.IsValid || !album.Object.IsValid)
             {
                 if (!_loggedMissing)
                 {

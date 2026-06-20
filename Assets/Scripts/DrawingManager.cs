@@ -191,8 +191,8 @@ public class DrawingManager : MonoBehaviour
 
         var png = texture.EncodeToPNG();
 
-        // Store locally — both decoded texture and raw bytes (needed for re-broadcast at Reveal)
-        DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
+        // Store locally as OWN drawing — cần phân biệt với PNG nhận từ player khác khi rebroadcast
+        DrawingTextureStore.StoreOwnTexture(chainLink, originSlot, png);
 
         // Prefix with magic byte + chainLink + originSlot so receiver can identify it
         var data = new byte[png.Length + 3];

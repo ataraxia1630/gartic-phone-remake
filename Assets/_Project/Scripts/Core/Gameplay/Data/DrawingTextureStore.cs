@@ -7,6 +7,27 @@ namespace InkEcho.Gameplay.Data
     {
         private static readonly Dictionary<int, Texture2D> _textures = new();
         private static readonly Dictionary<int, byte[]> _rawPngs = new();
+        // Chỉ lưu key của những PNG do LOCAL player tự vẽ (để rebroadcast đúng tác giả)
+        private static readonly System.Collections.Generic.HashSet<int> _ownDrawnKeys = new();
+
+        // Dùng khi LOCAL player tự vẽ (DrawingManager.BroadcastTexture)
+        public static void StoreOwnTexture(int chainLink, int originSlot, byte[] pngBytes)
+        {
+            _ownDrawnKeys.Add(chainLink * 32 + originSlot);
+            StoreTexture(chainLink, originSlot, pngBytes);
+        }
+
+        // Trả về chỉ những PNG do local player tự vẽ (dùng để rebroadcast về host)
+        public static IEnumerable<(byte chainLink, byte originSlot, byte[] png)> GetOwnRawPngs()
+        {
+            foreach (var kv in _rawPngs)
+            {
+                if (!_ownDrawnKeys.Contains(kv.Key)) continue;
+                byte link = (byte)(kv.Key / 32);
+                byte slot = (byte)(kv.Key % 32);
+                yield return (link, slot, kv.Value);
+            }
+        }
 
         public static void StoreTexture(int chainLink, int originSlot, byte[] pngBytes)
         {
@@ -52,6 +73,7 @@ namespace InkEcho.Gameplay.Data
                 if (tex != null) Object.Destroy(tex);
             _textures.Clear();
             _rawPngs.Clear();
+            _ownDrawnKeys.Clear();
         }
     }
 }
