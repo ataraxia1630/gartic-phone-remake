@@ -10,7 +10,6 @@ public class PhaseSceneController : MonoBehaviour
     private PhaseType _lastObservedPhase = PhaseType.None;
     private string _currentLoadedScene = "";
     private bool _loggedAlive;
-    private bool _loggedMissingPhaseManager;
 
     void OnEnable()
     {
@@ -54,15 +53,7 @@ public class PhaseSceneController : MonoBehaviour
         }
         var phaseManager = ServiceLocator.Get<PhaseManager>();
         if (phaseManager == null)
-        {
-            if (!_loggedMissingPhaseManager)
-            {
-                _loggedMissingPhaseManager = true;
-                Debug.LogWarning("[PhaseSceneController] ServiceLocator.Get<PhaseManager>() returned NULL");
-            }
             return;
-        }
-        _loggedMissingPhaseManager = false;
         if (phaseManager.CurrentPhase != _lastObservedPhase)
         {
             Debug.Log($"[PhaseSceneController] Phase changed: {_lastObservedPhase} -> {phaseManager.CurrentPhase} (HasStateAuthority={phaseManager.HasStateAuthority})");

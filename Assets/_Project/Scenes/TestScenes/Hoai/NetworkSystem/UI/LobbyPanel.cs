@@ -17,6 +17,8 @@ namespace InkEcho.Network.UI
         [Header("Display")]
         [SerializeField] private TMP_Text playerListText;
         [SerializeField] private TMP_Text modeText;
+        [SerializeField] private TMP_Text roomCodeText;
+        [SerializeField] private Button copyCodeButton;
 
         [Header("Controls")]
         [SerializeField] private Button readyButton;
@@ -31,6 +33,7 @@ namespace InkEcho.Network.UI
             _group = GetComponent<CanvasGroup>();
             if (modeSandwichButton != null) modeSandwichButton.onClick.AddListener(() => RequestMode(GameModeType.Sandwich));
             if (modeCoopButton != null) modeCoopButton.onClick.AddListener(() => RequestMode(GameModeType.Coop));
+            if (copyCodeButton != null) copyCodeButton.onClick.AddListener(OnCopyCodeClicked);
         }
 
         private void Update()
@@ -42,6 +45,7 @@ namespace InkEcho.Network.UI
 
             UpdatePlayerList();
             UpdateModeText();
+            UpdateRoomCode();
             UpdateButtonsVisibility();
         }
 
@@ -68,6 +72,22 @@ namespace InkEcho.Network.UI
                 sb.AppendLine($"  {slot.SlotIndex}. {slot.DisplayName} {status}{conn}");
             }
             playerListText.text = sb.ToString();
+        }
+
+        private void UpdateRoomCode()
+        {
+            var bootstrap = ServiceLocator.Get<NetworkBootstrap>();
+            string code = bootstrap?.Session?.Code ?? "";
+            if (roomCodeText != null)
+                roomCodeText.text = string.IsNullOrEmpty(code) ? "" : $"Room Code: {code}";
+        }
+
+        private void OnCopyCodeClicked()
+        {
+            var bootstrap = ServiceLocator.Get<NetworkBootstrap>();
+            string code = bootstrap?.Session?.Code ?? "";
+            if (!string.IsNullOrEmpty(code))
+                GUIUtility.systemCopyBuffer = code;
         }
 
         private void UpdateModeText()
