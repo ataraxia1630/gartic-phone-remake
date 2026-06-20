@@ -34,14 +34,36 @@ namespace InkEcho.Network.Players
 
             if (Slots.TryGet(player, out var existing))
             {
-                existing.DisplayName = displayName;
+                // Reconnect: giữ tên đã resolved (đã unique), chỉ cập nhật IsConnected
                 existing.IsConnected = true;
                 Slots.Set(player, existing);
                 return;
             }
 
-            var slot = PlayerSlotData.New(displayName.Value, (byte)Slots.Count);
+            var uniqueName = ResolveUniqueName(displayName.Value);
+            var slot = PlayerSlotData.New(uniqueName, (byte)Slots.Count);
             Slots.Set(player, slot);
+        }
+
+        private string ResolveUniqueName(string requested)
+        {
+            const int maxLen = 16;
+            var taken = new HashSet<string>(System.StringComparer.Ordinal);
+            foreach (var pair in Slots)
+                taken.Add(pair.Value.DisplayName.Value);
+
+            if (!taken.Contains(requested)) return requested;
+
+            for (int i = 2; i <= MaxPlayers + 1; i++)
+            {
+                var suffix = $"({i})";
+                var baseName = requested.Length + suffix.Length > maxLen
+                    ? requested.Substring(0, maxLen - suffix.Length)
+                    : requested;
+                var candidate = baseName + suffix;
+                if (!taken.Contains(candidate)) return candidate;
+            }
+            return requested;
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]

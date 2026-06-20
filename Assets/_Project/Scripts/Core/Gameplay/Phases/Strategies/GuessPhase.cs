@@ -34,7 +34,7 @@ namespace InkEcho.Network.Phases.Strategies
 
         private void ShowPreviousContent(PhaseManager manager)
         {
-            var uiHelper = Object.FindObjectOfType<InkEcho.UI.PhaseUIHelper>();
+            var uiHelper = Object.FindAnyObjectByType<InkEcho.UI.PhaseUIHelper>();
             if (uiHelper != null)
             {
                 uiHelper.ShowDrawing(manager.RoundIndex - 1, manager.RevealAlbumIndex);

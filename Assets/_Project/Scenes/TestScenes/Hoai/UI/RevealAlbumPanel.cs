@@ -226,7 +226,7 @@ namespace InkEcho.Hoai.UI
         private static T Resolve<T>() where T : Object
         {
             if (ServiceLocator.TryGet<T>(out var svc) && svc != null) return svc;
-            var found = FindObjectOfType<T>();
+            var found = FindAnyObjectByType<T>();
             if (found != null) ServiceLocator.Register<T>(found);
             return found;
         }

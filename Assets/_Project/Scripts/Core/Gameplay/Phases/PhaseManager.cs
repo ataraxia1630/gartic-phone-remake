@@ -68,7 +68,7 @@ namespace InkEcho.Network.Phases
             var album = ServiceLocator.Get<Data.AlbumStore>();
             if (album == null)
             {
-                album = UnityEngine.Object.FindObjectOfType<Data.AlbumStore>();
+                album = UnityEngine.Object.FindAnyObjectByType<Data.AlbumStore>();
                 if (album != null) ServiceLocator.Register<Data.AlbumStore>(album);
                 else Debug.LogWarning("[PhaseManager] AlbumStore không tìm thấy — PlayerCount sẽ là 0.");
             }

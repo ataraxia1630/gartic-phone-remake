@@ -200,7 +200,7 @@ namespace InkEcho.Network.Data
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<T>();
+                    _instance = FindAnyObjectByType<T>();
                     if (_instance == null)
                     {
                         var obj = new GameObject($"[{typeof(T).Name}]");
