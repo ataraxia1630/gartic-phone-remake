@@ -74,7 +74,7 @@ namespace InkEcho.Hoai.UI
             // fallback FindObjectOfType + re-register, giống PhaseManager.StartGame.
             var gsm = Resolve<GameStateMachine>();
             var album = Resolve<AlbumStore>();
-            if (gsm == null || album == null)
+            if (gsm == null || album == null || !gsm.Object.IsValid || !album.Object.IsValid)
             {
                 if (!_loggedMissing)
                 {
@@ -226,7 +226,7 @@ namespace InkEcho.Hoai.UI
         private static T Resolve<T>() where T : Object
         {
             if (ServiceLocator.TryGet<T>(out var svc) && svc != null) return svc;
-            var found = FindObjectOfType<T>();
+            var found = FindAnyObjectByType<T>();
             if (found != null) ServiceLocator.Register<T>(found);
             return found;
         }

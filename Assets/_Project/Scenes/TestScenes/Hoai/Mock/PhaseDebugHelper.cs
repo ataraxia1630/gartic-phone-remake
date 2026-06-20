@@ -126,7 +126,7 @@ namespace InkEcho.Hoai.Mock
             if (album == null)
             {
                 // ServiceLocator bị null sau scene change — tìm lại bằng FindObjectOfType
-                album = Object.FindObjectOfType<AlbumStore>();
+                album = Object.FindAnyObjectByType<AlbumStore>();
                 if (album != null)
                 {
                     ServiceLocator.Register<AlbumStore>(album);

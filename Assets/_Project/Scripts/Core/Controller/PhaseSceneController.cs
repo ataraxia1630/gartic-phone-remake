@@ -29,12 +29,20 @@ public class PhaseSceneController : MonoBehaviour
 
     private static void EnsureEventSystem()
     {
-        if (FindObjectOfType<EventSystem>() != null) return;
-
-        var go = new GameObject("EventSystem (gameplay-auto)");
-        go.AddComponent<EventSystem>();
-        go.AddComponent<InputSystemUIInputModule>();
-        Debug.Log("[PhaseSceneController] No EventSystem in gameplay scenes — created one so UI buttons work.");
+        var all = Object.FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
+        if (all.Length == 0)
+        {
+            var go = new GameObject("EventSystem (gameplay-auto)");
+            go.AddComponent<EventSystem>();
+            go.AddComponent<InputSystemUIInputModule>();
+            Debug.Log("[PhaseSceneController] Created EventSystem for gameplay scenes.");
+            return;
+        }
+        for (int i = 1; i < all.Length; i++)
+        {
+            Debug.LogWarning($"[PhaseSceneController] Destroying duplicate EventSystem: {all[i].gameObject.name}");
+            Object.Destroy(all[i].gameObject);
+        }
     }
 
     void Update()

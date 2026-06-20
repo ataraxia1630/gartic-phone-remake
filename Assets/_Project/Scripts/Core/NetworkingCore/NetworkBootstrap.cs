@@ -138,13 +138,8 @@ namespace InkEcho.Network.Core
             Debug.Log($"[OnReliableData] Nhận tranh từ player={player}: chainLink={chainLink}, originSlot={originSlot}, size={png.Length} bytes");
 
             DrawingTextureStore.StoreTexture(chainLink, originSlot, png);
-
-            // Fill missing author on host if the entry hasn't been assigned yet.
-            var album = ServiceLocator.Get<AlbumStore>();
-            if (album != null && album.HasStateAuthority)
-            {
-                album.SetWorkerIfMissing(chainLink, originSlot, player);
-            }
+            // WorkerPlayer được set bởi Rpc_SubmitDrawing — không set ở đây vì player là người GỬI data,
+            // không phải người vẽ (client có thể rebroadcast tranh của người khác).
         }
         public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
         public void OnSceneLoadDone(NetworkRunner runner) => OnSceneLoadDoneEvent?.Invoke(runner);

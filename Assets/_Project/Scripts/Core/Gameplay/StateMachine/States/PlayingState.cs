@@ -104,7 +104,7 @@ namespace InkEcho.Network.StateMachine.States
             if (pm != null) return pm;
 
             // Fallback: ServiceLocator might not have re-registered after scene change
-            pm = Object.FindObjectOfType<Phases.PhaseManager>();
+            pm = Object.FindAnyObjectByType<Phases.PhaseManager>();
             if (pm != null)
             {
                 ServiceLocator.Register<Phases.PhaseManager>(pm);
