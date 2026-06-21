@@ -19,6 +19,14 @@ namespace InkEcho.Network.StateMachine.States
             Debug.Log("[GameState] -> Playing");
             if (!machine.HasStateAuthority) return;
 
+            // Game đã bắt đầu: đóng session, chặn người mới cho đến khi quay lại sảnh.
+            if (machine.Runner != null && machine.Runner.SessionInfo != null && machine.Runner.SessionInfo.IsValid)
+            {
+                machine.Runner.SessionInfo.IsOpen = false;
+                machine.Runner.SessionInfo.IsVisible = false;
+                Debug.Log("[PlayingState] Session đóng — chặn người mới vào.");
+            }
+
             UnsubscribeSceneLoadDone();
 
             if (SceneManager.GetActiveScene().name == GameSceneName)

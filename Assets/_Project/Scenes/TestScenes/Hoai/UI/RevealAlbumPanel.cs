@@ -47,6 +47,9 @@ namespace InkEcho.Hoai.UI
         [Header("Non-host Status")]
         [SerializeField] private TextMeshProUGUI statusLabel;
 
+        [Header("Return To Lobby (hiện cho mọi người khi reveal xong)")]
+        [SerializeField] private Button returnToLobbyButton;
+
         [Header("Layout")]
         [Tooltip("Chiều rộng tối đa của mỗi bức tranh (px). Cao tự tính theo tỉ lệ tranh.")]
         [SerializeField] private float maxDrawingWidth = 700f;
@@ -154,12 +157,19 @@ namespace InkEcho.Hoai.UI
                 nextButton.onClick.RemoveListener(OnHostNext);
                 nextButton.onClick.AddListener(OnHostNext);
             }
+            if (returnToLobbyButton != null)
+            {
+                returnToLobbyButton.onClick.RemoveListener(OnReturnToLobby);
+                returnToLobbyButton.onClick.AddListener(OnReturnToLobby);
+                returnToLobbyButton.gameObject.SetActive(false);
+            }
             HideAllContent();
         }
 
         private void OnDisable()
         {
             if (nextButton != null) nextButton.onClick.RemoveListener(OnHostNext);
+            if (returnToLobbyButton != null) returnToLobbyButton.onClick.RemoveListener(OnReturnToLobby);
         }
 
         private void Update()
@@ -180,8 +190,13 @@ namespace InkEcho.Hoai.UI
             _loggedMissing = false;
 
             bool isHost = gsm.HasStateAuthority;
-            if (hostControlsRoot != null) hostControlsRoot.SetActive(isHost);
-            if (statusLabel != null) statusLabel.text = isHost ? string.Empty : "Chờ host mở...";
+            bool revealDone = gsm.IsRevealFinished;
+
+            // Khi reveal xong: ẩn host-controls, hiện nút "về sảnh" cho MỌI NGƯỜI.
+            if (hostControlsRoot != null) hostControlsRoot.SetActive(isHost && !revealDone);
+            if (returnToLobbyButton != null) returnToLobbyButton.gameObject.SetActive(revealDone);
+            if (statusLabel != null)
+                statusLabel.text = revealDone ? "Đã xong! Bấm để về sảnh." : (isHost ? string.Empty : "Chờ host mở...");
 
             byte chainSlot = gsm.RevealAlbumIndex;
             byte revealedLink = gsm.RevealLinkIndex;
@@ -189,7 +204,7 @@ namespace InkEcho.Hoai.UI
 
             if (isHost && nextButton != null)
             {
-                nextButton.interactable = !gsm.IsRevealFinished;
+                nextButton.interactable = !revealDone;
                 if (nextButtonLabel != null)
                     nextButtonLabel.text = ResolveNextButtonText(chainSlot, revealedLink, totalLinks, album.PlayerCount);
             }
@@ -306,6 +321,14 @@ namespace InkEcho.Hoai.UI
             var gsm = ServiceLocator.Get<GameStateMachine>();
             if (gsm == null) return;
             gsm.Rpc_RevealNext();
+        }
+
+        // Bất kỳ client nào cũng có thể bấm để cả phòng quay lại sảnh (RPC RpcSources.All).
+        private void OnReturnToLobby()
+        {
+            var gsm = ServiceLocator.Get<GameStateMachine>();
+            if (gsm == null) return;
+            gsm.Rpc_RequestReturnToLobby();
         }
 
         // Lấy singleton từ ServiceLocator; nếu null (ServiceLocator chưa re-register sau scene load)

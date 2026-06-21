@@ -16,6 +16,14 @@ namespace InkEcho.Network.StateMachine.States
 
             if (!machine.HasStateAuthority) return;
 
+            // Về sảnh: mở lại session cho người mới vào.
+            if (machine.Runner != null && machine.Runner.SessionInfo != null && machine.Runner.SessionInfo.IsValid)
+            {
+                machine.Runner.SessionInfo.IsOpen = true;
+                machine.Runner.SessionInfo.IsVisible = true;
+                Debug.Log("[LobbyState] Session mở — cho phép người mới vào.");
+            }
+
             // Nếu đang ở scene khác (vd ResultScene), load lại Lobby scene
             if (SceneManager.GetActiveScene().name != LobbySceneName)
             {

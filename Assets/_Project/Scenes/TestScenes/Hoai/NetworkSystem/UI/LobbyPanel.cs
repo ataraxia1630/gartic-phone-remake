@@ -25,6 +25,7 @@ namespace InkEcho.Network.UI
         [SerializeField] private Button startButton;
         [SerializeField] private Button modeSandwichButton;
         [SerializeField] private Button modeCoopButton;
+        
 
         private bool _localReady;
 
