@@ -201,16 +201,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 94182944}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 698037724}
+  m_Father: {fileID: 1229847996}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 258, y: 134}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 141.2, y: -63}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &94182946
@@ -298,7 +298,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 0, y: 0, z: -211.816, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -1059,7 +1059,6 @@ RectTransform:
   - {fileID: 934915100}
   - {fileID: 922655670}
   - {fileID: 612012486}
-  - {fileID: 94182945}
   - {fileID: 1968304067}
   m_Father: {fileID: 880453540}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1713,6 +1712,7 @@ RectTransform:
   - {fileID: 1608462656}
   - {fileID: 1938052018}
   - {fileID: 630413352}
+  - {fileID: 94182945}
   m_Father: {fileID: 880453540}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1734,6 +1734,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GarticPhone.Network.UI.LobbyPanel
   playerListText: {fileID: 1280849218}
   modeText: {fileID: 1781053429}
+  roomCodeText: {fileID: 94182946}
+  copyCodeButton: {fileID: 0}
   readyButton: {fileID: 445710882}
   startButton: {fileID: 1608462657}
   modeSandwichButton: {fileID: 1938052019}

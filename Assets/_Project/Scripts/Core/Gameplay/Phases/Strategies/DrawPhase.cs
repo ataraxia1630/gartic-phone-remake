@@ -24,6 +24,20 @@ namespace InkEcho.Network.Phases.Strategies
             if (seconds > 0f) manager.PhaseTimer = Fusion.TickTimer.CreateFromSeconds(manager.Runner, seconds);
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.ResetSubmittedFlags();
+
+            // Ghi sẵn tác giả (WorkerPlayer) cho mỗi album theo assignment xác định.
+            // Tránh bug "Vẽ bởi: ?" khi RPC nộp bài tới host trễ (sau khi host đã rời phase Draw)
+            // → Rpc_SubmitDrawing bị guard chặn nên WorkerPlayer không kịp set.
+            if (manager.HasStateAuthority)
+            {
+                var album = ServiceLocator.Get<AlbumStore>();
+                if (album != null)
+                {
+                    foreach (var a in manager.GetCurrentAssignments())
+                        album.SetWorkerIfMissing(a.ChainLinkIndex, a.AlbumOriginSlotIndex, a.Worker);
+                }
+            }
+
             Debug.Log("[Phase] Draw entered");
         }
 

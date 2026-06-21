@@ -1,5 +1,6 @@
 using Fusion;
 using InkEcho.Network.Core;
+using InkEcho.Network.Data;
 using InkEcho.Network.Players;
 using UnityEngine;
 
@@ -16,6 +17,18 @@ namespace InkEcho.Network.Phases.Strategies
             var registry = ServiceLocator.Get<PlayerRegistry>();
             registry?.ResetSubmittedFlags();
             Debug.Log("[Phase] FinalGuess entered");
+
+            // Ghi sẵn tác giả guess theo assignment xác định (như DrawPhase) —
+            // tránh "?" khi RPC nộp guess tới host trễ sau khi đã rời phase.
+            if (manager.HasStateAuthority)
+            {
+                var album = ServiceLocator.Get<AlbumStore>();
+                if (album != null)
+                {
+                    foreach (var a in manager.GetCurrentAssignments())
+                        album.SetWorkerIfMissing(a.ChainLinkIndex, a.AlbumOriginSlotIndex, a.Worker);
+                }
+            }
 
             // NEW: Show previous drawing
             if (manager.RoundIndex > 0)

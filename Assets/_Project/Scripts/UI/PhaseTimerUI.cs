@@ -9,23 +9,13 @@ public class PhaseTimerUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _timerText;
     [SerializeField] private TextMeshProUGUI _phaseNameText;
 
-    private bool _hasLoggedNull = false; // Tránh spam log
-
     void Update()
     {
         var phaseManager = ServiceLocator.Get<PhaseManager>();
 
         // Cửa số 1: Check xem PhaseManager đã đẻ ra chưa
         if (phaseManager == null)
-        {
-            if (!_hasLoggedNull)
-            {
-                Debug.LogWarning("[UI] Đang chờ PhaseManager load...");
-                _hasLoggedNull = true;
-            }
             return;
-        }
-        _hasLoggedNull = false;
 
         // Cửa số 2: Check xem game đã ra khỏi Lobby chưa
         if (phaseManager.CurrentPhase == PhaseType.None)
