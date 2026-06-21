@@ -47,9 +47,83 @@ namespace InkEcho.Hoai.UI
         [Header("Non-host Status")]
         [SerializeField] private TextMeshProUGUI statusLabel;
 
+        [Header("Layout")]
+        [Tooltip("Chiều rộng tối đa của mỗi bức tranh (px). Cao tự tính theo tỉ lệ tranh.")]
+        [SerializeField] private float maxDrawingWidth = 700f;
+        [Tooltip("Chiều cao tối đa của mỗi bức tranh (px) — chống tranh quá cao chiếm hết màn hình.")]
+        [SerializeField] private float maxDrawingHeight = 460f;
+
+        private const float LabelHeight = 44f;
+
         private byte _shownAlbum = byte.MaxValue;
         private byte _shownLink = byte.MaxValue;
         private bool _loggedMissing;
+
+        private void Awake()
+        {
+            // Content của ScrollView đã có sẵn VerticalLayoutGroup + ContentSizeFitter (Vertical=Preferred).
+            // Chỉ cần đảm bảo ContentSizeFitter tồn tại để Content tự cao theo nội dung → cuộn được.
+            RectTransform content = ResolveContent();
+            if (content == null) return;
+            var csf = content.GetComponent<ContentSizeFitter>();
+            if (csf == null) csf = content.gameObject.AddComponent<ContentSizeFitter>();
+            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private RectTransform ResolveContent()
+        {
+            foreach (var s in drawingSlots)
+                if (s?.root != null) return s.root.transform.parent as RectTransform;
+            return null;
+        }
+
+        // Cấp kích thước cho bức tranh + slot.
+        // CỐT LÕI: DrawingSlot có HorizontalLayoutGroup (ControlWidth=0) khiến mọi anchor bị ghi đè
+        // và DrawingImage rộng = preferredWidth (chưa set) = 0 → vô hình.
+        // Cách dứt điểm: TẮT HLG của slot, kiểm soát image + label hoàn toàn bằng anchor.
+        private void LayoutImage(DrawingLinkSlot dslot, Texture2D tex)
+        {
+            float aspect = (tex.width > 0) ? (float)tex.height / tex.width : 0.6f;
+            float w = maxDrawingWidth;
+            float h = w * aspect;
+            if (h > maxDrawingHeight) { h = maxDrawingHeight; w = h / aspect; }
+            float slotH = h + LabelHeight;
+
+            // 1) Tắt layout group lồng trong slot — nguồn gốc xung đột.
+            var hlg = dslot.root.GetComponent<HorizontalLayoutGroup>();
+            if (hlg != null) hlg.enabled = false;
+            var vlgSlot = dslot.root.GetComponent<VerticalLayoutGroup>();
+            if (vlgSlot != null) vlgSlot.enabled = false;
+
+            // 2) Slot báo chiều cao cho VerticalLayoutGroup của Content (ControlHeight=1 nên sẽ đọc giá trị này).
+            var rootLe = dslot.root.GetComponent<LayoutElement>();
+            if (rootLe == null) rootLe = dslot.root.AddComponent<LayoutElement>();
+            rootLe.minHeight = slotH;
+            rootLe.preferredHeight = slotH;
+
+            // 3) DrawingImage: căn trên-giữa slot, kích thước cố định w×h.
+            var imgLe = dslot.drawingImage.GetComponent<LayoutElement>();
+            if (imgLe != null) imgLe.ignoreLayout = true;
+            var irt = dslot.drawingImage.rectTransform;
+            irt.anchorMin = new Vector2(0.5f, 1f);
+            irt.anchorMax = new Vector2(0.5f, 1f);
+            irt.pivot = new Vector2(0.5f, 1f);
+            irt.sizeDelta = new Vector2(w, h);
+            irt.anchoredPosition = Vector2.zero;
+
+            // 4) AuthorLabel: dải dưới cùng slot.
+            if (dslot.authorLabel != null)
+            {
+                var le = dslot.authorLabel.GetComponent<LayoutElement>();
+                if (le != null) le.ignoreLayout = true;
+                var lrt = dslot.authorLabel.rectTransform;
+                lrt.anchorMin = new Vector2(0f, 0f);
+                lrt.anchorMax = new Vector2(1f, 0f);
+                lrt.pivot = new Vector2(0.5f, 0f);
+                lrt.sizeDelta = new Vector2(0f, LabelHeight);
+                lrt.anchoredPosition = Vector2.zero;
+            }
+        }
 
         private void OnEnable()
         {
@@ -133,10 +207,6 @@ namespace InkEcho.Hoai.UI
             // Drawing links: link 1..totalLinks-2
             int drawingCount = Mathf.Max(0, (int)totalLinks - 2);
 
-            var storedKeys = new System.Text.StringBuilder();
-            int storedTextures = 0;
-            foreach (var (cl, os, png) in DrawingTextureStore.GetAllRawPngs()) { storedTextures++; storedKeys.Append($"({cl},{os}) "); }
-            Debug.Log($"[RevealAlbumPanel] Refresh album={chainSlot} link={revealedLink} totalLinks={totalLinks} drawingCount={drawingCount} playerCount={album.PlayerCount} storedTextures={storedTextures} storedKeys(chainLink,originSlot)=[{storedKeys}]");
             for (int i = 0; i < drawingSlots.Length; i++)
             {
                 var dslot = drawingSlots[i];
@@ -148,28 +218,18 @@ namespace InkEcho.Hoai.UI
 
                 var entry = album.GetEntry(linkIdx, chainSlot);
                 var tex = DrawingTextureStore.GetTexture(linkIdx, chainSlot);
-                Debug.Log($"[RevealAlbumPanel] slot i={i} -> GetTexture(linkIdx={linkIdx}, chainSlot={chainSlot}) key={linkIdx * 32 + chainSlot} => {(tex != null ? $"FOUND {tex.width}x{tex.height}" : "NULL")}; entry.WorkerPlayer={entry.WorkerPlayer}");
+
                 if (tex != null)
                 {
-                    if (dslot.drawingImage != null) 
-                    { 
-                        dslot.drawingImage.texture = tex; 
-                        dslot.drawingImage.enabled = true; 
+                    if (dslot.drawingImage != null)
+                    {
+                        dslot.drawingImage.texture = tex;
+                        dslot.drawingImage.uvRect = new Rect(0, 0, 1, 1);
+                        dslot.drawingImage.enabled = true;
                         dslot.drawingImage.gameObject.SetActive(true);
                         dslot.drawingImage.color = Color.white;
 
-                        // Cách sửa tận gốc vấn đề ScrollView: 
-                        // Khi nằm trong Layout Group của ScrollView, RawImage thường bị bóp nghẹt kích thước về 0x0
-                        // Ta sẽ tự động gắn/ép LayoutElement để Layout Group cấp đủ không gian (800x600) cho ảnh.
-                        var layoutElement = dslot.drawingImage.GetComponent<UnityEngine.UI.LayoutElement>();
-                        if (layoutElement == null) layoutElement = dslot.drawingImage.gameObject.AddComponent<UnityEngine.UI.LayoutElement>();
-                        layoutElement.minWidth = 800f;
-                        layoutElement.minHeight = 600f;
-                        layoutElement.preferredWidth = 800f;
-                        layoutElement.preferredHeight = 600f;
-                        
-                        var rt = dslot.drawingImage.rectTransform;
-                        Debug.Log($"[RevealAlbumPanel] UI DEBUG slot {i}: sizeDelta={rt.sizeDelta}, rect={rt.rect}, activeInHierarchy={dslot.drawingImage.gameObject.activeInHierarchy}, scale={rt.localScale}");
+                        LayoutImage(dslot, tex);
                     }
                     else
                     {
@@ -179,7 +239,7 @@ namespace InkEcho.Hoai.UI
                 }
                 else
                 {
-                    if (dslot.drawingImage != null) 
+                    if (dslot.drawingImage != null)
                     {
                         dslot.drawingImage.enabled = false;
                         dslot.drawingImage.gameObject.SetActive(false);
@@ -202,6 +262,14 @@ namespace InkEcho.Hoai.UI
                     if (finalGuessLabel != null) finalGuessLabel.text = $"\"{guess}\"";
                     if (guessAuthorLabel != null) guessAuthorLabel.text = $"— {ResolveName(lastEntry.WorkerPlayer)}";
                 }
+            }
+
+            // Ép layout tính lại sau khi thay đổi LayoutElement runtime, để ScrollView cấp đúng kích thước.
+            var content = ResolveContent();
+            if (content != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(content);
             }
         }
 
