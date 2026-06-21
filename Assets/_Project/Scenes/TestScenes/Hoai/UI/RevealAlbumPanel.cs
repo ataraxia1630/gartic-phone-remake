@@ -61,6 +61,8 @@ namespace InkEcho.Hoai.UI
 
         private void Awake()
         {
+            FixViewportMask();
+
             // Content của ScrollView đã có sẵn VerticalLayoutGroup + ContentSizeFitter (Vertical=Preferred).
             // Chỉ cần đảm bảo ContentSizeFitter tồn tại để Content tự cao theo nội dung → cuộn được.
             RectTransform content = ResolveContent();
@@ -68,6 +70,24 @@ namespace InkEcho.Hoai.UI
             var csf = content.GetComponent<ContentSizeFitter>();
             if (csf == null) csf = content.gameObject.AddComponent<ContentSizeFitter>();
             csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        // GỐC RỄ vì sao Content vô hình: Viewport dùng legacy Mask + Image alpha=0.
+        // Legacy Mask ghi stencil qua clip(color.a - threshold); alpha=0 => không ghi gì =>
+        // mọi con fail stencil test "Comp Equal" => vô hình toàn bộ (prompt, ảnh, guess).
+        // Thay bằng RectMask2D: clip theo rect, không stencil, không phụ thuộc alpha.
+        private void FixViewportMask()
+        {
+            var scroll = GetComponentInChildren<ScrollRect>(true);
+            if (scroll == null) return;
+            var viewport = scroll.viewport != null ? scroll.viewport : (scroll.transform.Find("Viewport") as RectTransform);
+            if (viewport == null) return;
+
+            var legacy = viewport.GetComponent<Mask>();
+            if (legacy != null) Destroy(legacy);
+
+            if (viewport.GetComponent<RectMask2D>() == null)
+                viewport.gameObject.AddComponent<RectMask2D>();
         }
 
         private RectTransform ResolveContent()
