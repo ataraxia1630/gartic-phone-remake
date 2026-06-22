@@ -37,19 +37,21 @@ public class LocalSubmitController : MonoBehaviour
             {
                 Debug.Log($"[LocalSubmit] Auto-trigger from Update: phase={phaseManager.CurrentPhase}, timeLeft={timeLeft}");
 
-                ForceSubmitCurrentWork();
+                DoSubmit(isAutoTimeout: true);
             }
         }
     }
 
     // Có thể bind nút Submit trong UI gọi vào đây (chạy ngay không đợi timeout).
-    public void SubmitNow() => ForceSubmitCurrentWork();
+    public void SubmitNow() => DoSubmit(isAutoTimeout: false);
 
-    public void ForceSubmitCurrentWork()
+    public void ForceSubmitCurrentWork() => DoSubmit(isAutoTimeout: false);
+
+    private void DoSubmit(bool isAutoTimeout)
     {
-        Debug.Log($"[LocalSubmit] ForceSubmitCurrentWork called: _hasSubmittedThisPhase={_hasSubmittedThisPhase}");
+        Debug.Log($"[LocalSubmit] ForceSubmitCurrentWork called: _hasSubmittedThisPhase={_hasSubmittedThisPhase}, isAutoTimeout={isAutoTimeout}");
 
-        if (_hasSubmittedThisPhase) return;
+        if (isAutoTimeout && _hasSubmittedThisPhase) return;
         _hasSubmittedThisPhase = true;
 
         var phaseManager = ServiceLocator.Get<PhaseManager>();

@@ -14,10 +14,9 @@ namespace InkEcho.Network.GameModes.Modes
 
         public override int CalculateTotalRounds(int playerCount)
         {
-            // Prompt(1) + Draw(1) + (Observe+Draw) * (playerCount-2) + FinalGuess(1) = 2*(n-1)+1
-            // n=2: 3, n=3: 5, n=4: 7
-            // (n-1) lần Draw để mỗi người vẽ đúng n-1 album khác nhau, không bao giờ vẽ album mình
-            return 2 + Mathf.Max(0, playerCount - 2) * 2 + 1;
+            // Prompt(1) + Draw(1) + (Observe+Draw) * max(1, playerCount-2) + FinalGuess(1)
+            // n=2: 5 (vẫn ép 1 cặp Observe+Draw dù chỉ 2 người, 2 người sẽ vẽ vòng lại cho nhau), n=3: 5, n=4: 7
+            return 2 + Mathf.Max(1, playerCount - 2) * 2 + 1;
         }
 
         public override PhaseType GetPhaseForRound(int roundIndex, int totalRounds)
