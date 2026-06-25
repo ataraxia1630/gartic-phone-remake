@@ -10,6 +10,7 @@ public class PhaseSceneController : MonoBehaviour
     private PhaseType _lastObservedPhase = PhaseType.None;
     private string _currentLoadedScene = "";
     private bool _loggedAlive;
+    private Coroutine _switchRoutine;
 
     void OnEnable()
     {
@@ -64,12 +65,26 @@ public class PhaseSceneController : MonoBehaviour
 
     private void SwitchPhaseScene(PhaseType newPhase, PhaseManager manager)
     {
+        if (_switchRoutine != null) StopCoroutine(_switchRoutine);
+        _switchRoutine = StartCoroutine(SwitchPhaseSceneRoutine(newPhase, manager));
+    }
+
+    // Phải đợi unload xong hẳn rồi mới load scene mới — nếu không, GameObject (vd DrawingManager)
+    // của scene cũ có thể còn sống vài frame và nhận input/Update() song song với instance mới,
+    // gây stray strokes bị gửi nhầm chainLink/originSlot (tranh bị "chồng" giữa các lượt vẽ).
+    private System.Collections.IEnumerator SwitchPhaseSceneRoutine(PhaseType newPhase, PhaseManager manager)
+    {
         if (!string.IsNullOrEmpty(_currentLoadedScene))
         {
             Debug.Log($"[PhaseSceneController] Unloading previous scene: {_currentLoadedScene}");
 
-            SceneManager.UnloadSceneAsync(_currentLoadedScene);
+            var sceneToUnload = _currentLoadedScene; 
             _currentLoadedScene = "";
+            var unloadOp = SceneManager.UnloadSceneAsync(sceneToUnload);
+            if (unloadOp != null)
+            {
+                while (!unloadOp.isDone) yield return null;
+            }
         }
 
         var modeConfig = manager.GetActiveModeConfig();
@@ -93,6 +108,7 @@ public class PhaseSceneController : MonoBehaviour
         {
             Debug.LogWarning($"[PhaseSceneController] No scene mapped for phase {newPhase}");
         }
+        _switchRoutine = null;
     }
 
     private static string GetDefaultSceneForPhase(PhaseType phase)
