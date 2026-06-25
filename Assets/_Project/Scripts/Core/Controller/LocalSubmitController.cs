@@ -85,9 +85,16 @@ public class LocalSubmitController : MonoBehaviour
                     break;
 
                 case PhaseType.FinalGuess:
-                    string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
-                        ? finalGuessInput.text.Trim() : "(empty)";
-                    albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, new NetworkString<_16>(guessText), assignment.PairRole);
+                    if (ServiceLocator.TryGet<FinalGuessInputController>(out var finalGuessCtrl))
+                    {
+                        finalGuessCtrl.ForceSubmit("(empty)");
+                    }
+                    else
+                    {
+                        string guessText = finalGuessInput != null && !string.IsNullOrWhiteSpace(finalGuessInput.text)
+                            ? finalGuessInput.text.Trim() : "(empty)";
+                        albumStore.Rpc_SubmitFinalGuess(assignment.AlbumOriginSlotIndex, new NetworkString<_16>(guessText), assignment.PairRole);
+                    }
                     break;
             }
             Debug.Log($"[LocalSubmit] Đã nộp bài cho phase {phaseManager.CurrentPhase} (chain {assignment.AlbumOriginSlotIndex}, link {assignment.ChainLinkIndex})");
