@@ -22,6 +22,10 @@ public class DrawingManager : MonoBehaviour
     public int textureHeight = 600;
     public float minDistance = 0.05f;  // Đơn vị pixel thay vì world unit
 
+    [Header("Network Transmission")]
+    [Tooltip("Kích thước cạnh dài nhất của PNG khi gửi qua mạng — giảm để giảm trễ load ở phase Observe.")]
+    public int transmitMaxDimension = 480;
+
     private static readonly ReliableKey DrawingTextureKey = ReliableKey.FromInts(0xDA, 0, 0, 0);
     // State
     private Texture2D texture;
@@ -189,7 +193,9 @@ public class DrawingManager : MonoBehaviour
         var runner = NetworkBootstrap.Instance?.Runner;
         if (runner == null) return;
 
-        var png = texture.EncodeToPNG();
+        var sendTex = CreateDownscaledCopy(texture, transmitMaxDimension);
+        var png = sendTex.EncodeToPNG();
+        if (sendTex != texture) Destroy(sendTex);
 
         // Store locally as OWN drawing — cần phân biệt với PNG nhận từ player khác khi rebroadcast
         DrawingTextureStore.StoreOwnTexture(chainLink, originSlot, png);
@@ -463,6 +469,30 @@ public class DrawingManager : MonoBehaviour
         redoStack.Clear();
         lastPos = null;
         isDrawing = false;
+    }
+
+    private static Texture2D CreateDownscaledCopy(Texture2D source, int maxDimension)
+    {
+        int srcW = source.width;
+        int srcH = source.height;
+        float scale = Mathf.Min(1f, (float)maxDimension / Mathf.Max(srcW, srcH));
+        int targetW = Mathf.Max(1, Mathf.RoundToInt(srcW * scale));
+        int targetH = Mathf.Max(1, Mathf.RoundToInt(srcH * scale));
+
+        if (targetW == srcW && targetH == srcH) return source;
+
+        var rt = RenderTexture.GetTemporary(targetW, targetH, 0, RenderTextureFormat.ARGB32);
+        var prevActive = RenderTexture.active;
+        Graphics.Blit(source, rt);
+        RenderTexture.active = rt;
+
+        var result = new Texture2D(targetW, targetH, TextureFormat.RGBA32, false);
+        result.ReadPixels(new Rect(0, 0, targetW, targetH), 0, 0);
+        result.Apply();
+
+        RenderTexture.active = prevActive;
+        RenderTexture.ReleaseTemporary(rt);
+        return result;
     }
 
     private static Color[] ResamplePixels(Texture2D source, int targetW, int targetH)
