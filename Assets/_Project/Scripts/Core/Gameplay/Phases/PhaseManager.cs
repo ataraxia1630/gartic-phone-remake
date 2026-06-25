@@ -31,6 +31,8 @@ namespace InkEcho.Network.Phases
         private GameModeType _cachedAssignmentMode;
         private byte _cachedAssignmentOrderCount;
 
+        private static readonly System.Random s_shuffleRandom = new System.Random();
+
         public override void Spawned()
         {
             ServiceLocator.Register<PhaseManager>(this);
@@ -293,10 +295,9 @@ namespace InkEcho.Network.Phases
             }
 
             var shuffled = new List<PlayerRef>(orderedPlayers);
-            var random = new System.Random(unchecked((int)DateTime.UtcNow.Ticks));
             for (int i = shuffled.Count - 1; i > 0; i--)
             {
-                var swapIndex = random.Next(i + 1);
+                var swapIndex = s_shuffleRandom.Next(i + 1);
                 var temp = shuffled[i];
                 shuffled[i] = shuffled[swapIndex];
                 shuffled[swapIndex] = temp;
@@ -312,6 +313,7 @@ namespace InkEcho.Network.Phases
                 PlayOrderSlotIndices.Set(i, slotIndex);
                 PlayOrderCount++;
             }
+            Debug.Log($"[PhaseManager] ApplyRandomPlayOrder: joinOrder=[{string.Join(",", orderedPlayers)}] -> shuffled=[{string.Join(",", shuffled)}]");
 
             _cachedAssignmentOrderCount = 0;
         }
