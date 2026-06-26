@@ -535,6 +535,26 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4149493945325129642, guid: a4830d677ab607146946abd11e7adaa8, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4149493945325129642, guid: a4830d677ab607146946abd11e7adaa8, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4149493945325129642, guid: a4830d677ab607146946abd11e7adaa8, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4149493945325129642, guid: a4830d677ab607146946abd11e7adaa8, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4149493945325129642, guid: a4830d677ab607146946abd11e7adaa8, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4201718822326588651, guid: a4830d677ab607146946abd11e7adaa8, type: 3}
       propertyPath: m_Name
       value: RevealAlbumPanel

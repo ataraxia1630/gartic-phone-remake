@@ -8,12 +8,15 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/_Project/Scenes/TestScenes/Hoai/Fusion Test.unity
     guid: 8ce839204b2deb346b1978745a842f12
-  - enabled: 1
+  - enabled: 0
     path: Assets/_Project/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
   - enabled: 0
     path: Assets/_Project/Scenes/TestScenes/Chau/DrawingTest.unity
     guid: 6ce841fbb40c59a47a5256b622342a68
+  - enabled: 1
+    path: Assets/_Project/Scenes/TestScenes/Hoai/NetworkSystem/Scenes/NetworkSystem_Test.unity
+    guid: 09c25f6a0c9480b499b77992894ef3e3
   - enabled: 1
     path: Assets/_Project/Scenes/Game/Phases/UI_Guess.unity
     guid: d467d028dd2bd654cbb6c2162858a979

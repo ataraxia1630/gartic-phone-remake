@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEngine;
 using NUnit.Framework;
@@ -198,3 +199,4 @@ public class DrawingDataConverterTests
         Assert.That(ratio, Is.GreaterThan(75).And.LessThan(85));
     }
 }
+#endif

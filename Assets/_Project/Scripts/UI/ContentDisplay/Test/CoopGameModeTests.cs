@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using Fusion;
 using InkEcho.Network.GameModes.Modes;
@@ -200,3 +201,4 @@ public class CoopGameModeTests
         throw new System.Exception($"Không tìm thấy assignment cho {player}");
     }
 }
+#endif

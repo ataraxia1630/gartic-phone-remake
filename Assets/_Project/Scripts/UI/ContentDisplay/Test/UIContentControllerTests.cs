@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using NUnit.Framework;
 using UnityEngine;
 using InkEcho.UI.ContentDisplay;
@@ -211,3 +212,4 @@ namespace InkEcho.UI.Tests
         }
     }
 }
+#endif
