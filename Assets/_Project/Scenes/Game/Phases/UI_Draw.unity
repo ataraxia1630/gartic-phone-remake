@@ -1629,10 +1629,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Prompt: Orange is going to shoopping in a restaurant'
+  m_text: 'Prompt: ....'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c3422c74bf86cef4388b233683be118a, type: 2}
-  m_sharedMaterial: {fileID: 1371219834684390890, guid: c3422c74bf86cef4388b233683be118a, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
