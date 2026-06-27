@@ -81,7 +81,7 @@ namespace InkEcho.Hoai.Mock
         {
             if (mockData == null || mockData.albums == null || mockData.albums.Length == 0)
             {
-                if (titleLabel != null) titleLabel.text = "(Không có MockAlbumData)";
+                if (titleLabel != null) titleLabel.text = "(No MockAlbumData)";
                 return;
             }
 
@@ -93,7 +93,7 @@ namespace InkEcho.Hoai.Mock
                 albumIndexLabel.text = $"Album {_albumIndex + 1} / {mockData.albums.Length}";
 
             if (titleLabel != null)
-                titleLabel.text = $"Album của {album.ownerName}";
+                titleLabel.text = $"{album.ownerName}'s Album";
 
             // Prompt — hiện ngay khi mở album (linkIndex >= 0 luôn đúng)
             if (promptContainer != null) promptContainer.SetActive(true);
@@ -118,7 +118,7 @@ namespace InkEcho.Hoai.Mock
                     dslot.drawingImage.enabled = true;
                 }
                 if (dslot.authorLabel != null)
-                    dslot.authorLabel.text = $"Vẽ bởi: {entry.drawerName}";
+                    dslot.authorLabel.text = $"Drawn by: {entry.drawerName}";
             }
 
             // Final guess
@@ -135,9 +135,9 @@ namespace InkEcho.Hoai.Mock
             {
                 bool allShown = _linkIndex >= lastLink;
                 bool isLastAlbum = _albumIndex >= mockData.albums.Length - 1;
-                if (allShown && isLastAlbum) nextButtonLabel.text = "Kết thúc";
-                else if (allShown) nextButtonLabel.text = "Album tiếp theo ▶";
-                else nextButtonLabel.text = "Tiếp theo ▶";
+                if (allShown && isLastAlbum) nextButtonLabel.text = "Finish";
+                else if (allShown) nextButtonLabel.text = "Next Album";
+                else nextButtonLabel.text = "Next";
             }
 
             Canvas.ForceUpdateCanvases();

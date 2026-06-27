@@ -28,6 +28,7 @@ namespace InkEcho.Network.UI
         
 
         private bool _localReady;
+        private bool _lastKnownInLobby;
 
         private void Awake()
         {
@@ -39,8 +40,17 @@ namespace InkEcho.Network.UI
 
         private void Update()
         {
+            var bootstrap = ServiceLocator.Get<NetworkBootstrap>() ?? NetworkBootstrap.Instance;
+            bool inSession = bootstrap != null && bootstrap.Runner != null && bootstrap.Runner.IsRunning;
+
             var sm = ServiceLocator.Get<GameStateMachine>();
-            bool inLobby = sm != null && sm.CurrentState == GameStateType.Lobby;
+            if (sm != null)
+                _lastKnownInLobby = sm.CurrentState == GameStateType.Lobby;
+
+            // Trong lúc host migration SM tạm thời null — giữ trạng thái lobby cuối
+            // để tránh màn hình trắng làm player nghĩ bị kick
+            bool inLobby = inSession && _lastKnownInLobby;
+
             SetVisible(inLobby);
             if (!inLobby) return;
 
@@ -68,7 +78,7 @@ namespace InkEcho.Network.UI
             foreach (var pair in registry.Slots)
             {
                 var slot = pair.Value;
-                var status = slot.IsReady ? "[READY]" : "[...]";
+                var status = slot.IsReady ? "[Ready]" : "[Unready]";
                 var conn = slot.IsConnected ? "" : " (offline)";
                 sb.AppendLine($"  {slot.SlotIndex}. {slot.DisplayName} {status}{conn}");
             }
@@ -80,7 +90,7 @@ namespace InkEcho.Network.UI
             var bootstrap = ServiceLocator.Get<NetworkBootstrap>();
             string code = bootstrap?.Session?.Code ?? "";
             if (roomCodeText != null)
-                roomCodeText.text = string.IsNullOrEmpty(code) ? "" : $"Room Code: {code}";
+                roomCodeText.text = string.IsNullOrEmpty(code) ? "" : $"{code}";
         }
 
         private void OnCopyCodeClicked()

@@ -20,7 +20,7 @@ namespace InkEcho.Hoai.Editor
         // ─────────────────────────────────────────────────────────
         // 1. Network panel
         // ─────────────────────────────────────────────────────────
-        [MenuItem("InkEcho/Build UI/① Reveal Album Panel (network)")]
+        [MenuItem("InkEcho/Build UI/1. Reveal Album Panel (network)")]
         public static void BuildRevealAlbumPanel()
         {
             var root = BuildPanelRoot("RevealAlbumPanel", out var scrollContent, out var footer);
@@ -28,17 +28,17 @@ namespace InkEcho.Hoai.Editor
 
             // Header title
             var titleLabel = MakeLabel(root.transform.GetChild(0).gameObject, "TitleLabel",
-                "Album của [Player]", 26, FontStyles.Bold, TextAlignmentOptions.Center);
+                "[Player]'s Album", 26, FontStyles.Bold, TextAlignmentOptions.Center);
             LayoutEl(titleLabel.gameObject, preferredHeight: 44);
 
             // Prompt card (link 0)
             var promptCard = MakeCard(scrollContent, "PromptContainer", new Color(0.15f, 0.35f, 0.15f, 0.9f));
             promptCard.SetActive(true); // tạm enable cho dễ nhìn, panel sẽ toggle runtime
             var promptLabel = MakeLabel(promptCard, "PromptLabel",
-                "\"Prompt gốc sẽ hiện ở đây\"", 18, FontStyles.Italic, TextAlignmentOptions.Center);
+                "\"Original prompt appears here\"", 18, FontStyles.Italic, TextAlignmentOptions.Center);
             LayoutEl(promptLabel.gameObject, preferredHeight: 30);
             var promptAuthorLabel = MakeLabel(promptCard, "PromptAuthorLabel",
-                "— Tác giả", 13, FontStyles.Normal, TextAlignmentOptions.Right);
+                "— Author", 13, FontStyles.Normal, TextAlignmentOptions.Right);
             LayoutEl(promptAuthorLabel.gameObject, preferredHeight: 22);
             LayoutEl(promptCard, preferredHeight: 76);
 
@@ -61,16 +61,16 @@ namespace InkEcho.Hoai.Editor
             var guessCard = MakeCard(scrollContent, "GuessContainer", new Color(0.4f, 0.2f, 0.05f, 0.9f));
             guessCard.SetActive(false);
             var finalGuessLabel = MakeLabel(guessCard, "FinalGuessLabel",
-                "\"Câu đoán cuối cùng\"", 18, FontStyles.Italic, TextAlignmentOptions.Center);
+                "\"Final guess\"", 18, FontStyles.Italic, TextAlignmentOptions.Center);
             LayoutEl(finalGuessLabel.gameObject, preferredHeight: 30);
             var guessAuthorLabel = MakeLabel(guessCard, "GuessAuthorLabel",
-                "— Người đoán", 13, FontStyles.Normal, TextAlignmentOptions.Right);
+                "— Guesser", 13, FontStyles.Normal, TextAlignmentOptions.Right);
             LayoutEl(guessAuthorLabel.gameObject, preferredHeight: 22);
             LayoutEl(guessCard, preferredHeight: 76);
 
             // Footer: status (non-host) + host controls
             var statusLabel = MakeLabel(footer, "StatusLabel",
-                "Chờ host mở...", 14, FontStyles.Normal, TextAlignmentOptions.Center);
+                "Waiting for host...", 14, FontStyles.Normal, TextAlignmentOptions.Center);
             statusLabel.color = new Color(0.75f, 0.75f, 0.75f);
             var statusLE = statusLabel.gameObject.AddComponent<LayoutElement>();
             statusLE.flexibleWidth = 1;
@@ -82,7 +82,7 @@ namespace InkEcho.Hoai.Editor
             hcLE.preferredWidth = 220;
             hcLE.flexibleWidth = 0;
 
-            var nextBtn = MakeButton(hostControls, "NextButton", "Tiếp theo ▶",
+            var nextBtn = MakeButton(hostControls, "NextButton", "Next",
                 new Color(0.18f, 0.5f, 0.9f), out var nextBtnLabel);
             // stretch button to fill hostControls
             var btnRect = nextBtn.GetComponent<RectTransform>();
@@ -122,7 +122,7 @@ namespace InkEcho.Hoai.Editor
         // ─────────────────────────────────────────────────────────
         // 2. Mock (offline) panel
         // ─────────────────────────────────────────────────────────
-        [MenuItem("InkEcho/Build UI/② Mock Reveal Panel (offline test)")]
+        [MenuItem("InkEcho/Build UI/2. Mock Reveal Panel (offline test)")]
         public static void BuildMockRevealPanel()
         {
             var root = BuildPanelRoot("MockRevealPanel", out var scrollContent, out var footer);
@@ -135,16 +135,16 @@ namespace InkEcho.Hoai.Editor
             albumIndexLabel.color = new Color(0.7f, 0.7f, 0.7f);
             LayoutEl(albumIndexLabel.gameObject, preferredHeight: 20);
             var titleLabel = MakeLabel(headerGo, "TitleLabel",
-                "Album của [Player]", 24, FontStyles.Bold, TextAlignmentOptions.Center);
+                "[Player]'s Album", 24, FontStyles.Bold, TextAlignmentOptions.Center);
             LayoutEl(titleLabel.gameObject, preferredHeight: 38);
 
             // Prompt card
             var promptCard = MakeCard(scrollContent, "PromptContainer", new Color(0.15f, 0.35f, 0.15f, 0.9f));
             var promptLabel = MakeLabel(promptCard, "PromptLabel",
-                "\"Prompt gốc\"", 18, FontStyles.Italic, TextAlignmentOptions.Center);
+                "\"Original prompt\"", 18, FontStyles.Italic, TextAlignmentOptions.Center);
             LayoutEl(promptLabel.gameObject, preferredHeight: 30);
             var promptAuthorLabel = MakeLabel(promptCard, "PromptAuthorLabel",
-                "— Chủ album", 13, FontStyles.Normal, TextAlignmentOptions.Right);
+                "— Album owner", 13, FontStyles.Normal, TextAlignmentOptions.Right);
             LayoutEl(promptAuthorLabel.gameObject, preferredHeight: 22);
             LayoutEl(promptCard, preferredHeight: 76);
 
@@ -167,15 +167,15 @@ namespace InkEcho.Hoai.Editor
             var guessCard = MakeCard(scrollContent, "GuessContainer", new Color(0.4f, 0.2f, 0.05f, 0.9f));
             guessCard.SetActive(false);
             var finalGuessLabel = MakeLabel(guessCard, "FinalGuessLabel",
-                "\"Câu đoán\"", 18, FontStyles.Italic, TextAlignmentOptions.Center);
+                "\"Guess\"", 18, FontStyles.Italic, TextAlignmentOptions.Center);
             LayoutEl(finalGuessLabel.gameObject, preferredHeight: 30);
             var guessAuthorLabel = MakeLabel(guessCard, "GuessAuthorLabel",
-                "— Người đoán", 13, FontStyles.Normal, TextAlignmentOptions.Right);
+                "— Guesser", 13, FontStyles.Normal, TextAlignmentOptions.Right);
             LayoutEl(guessAuthorLabel.gameObject, preferredHeight: 22);
             LayoutEl(guessCard, preferredHeight: 76);
 
             // Footer: next button only (no status label, mock is always "host")
-            var nextBtn = MakeButton(footer, "NextButton", "Tiếp theo ▶",
+            var nextBtn = MakeButton(footer, "NextButton", "Next",
                 new Color(0.18f, 0.5f, 0.9f), out var nextBtnLabel);
             var btnLE = nextBtn.AddComponent<LayoutElement>();
             btnLE.preferredWidth = 220;
@@ -373,7 +373,7 @@ namespace InkEcho.Hoai.Editor
             authorGo.transform.SetParent(card.transform, false);
             authorGo.AddComponent<RectTransform>();
             var tmp = authorGo.AddComponent<TextMeshProUGUI>();
-            tmp.text = $"Vẽ bởi: Player {index + 1}";
+            tmp.text = $"Drawn by: Player {index + 1}";
             tmp.fontSize = 14;
             tmp.color = Color.white;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;

@@ -196,7 +196,7 @@ namespace InkEcho.Hoai.UI
             if (hostControlsRoot != null) hostControlsRoot.SetActive(isHost && !revealDone);
             if (returnToLobbyButton != null) returnToLobbyButton.gameObject.SetActive(revealDone);
             if (statusLabel != null)
-                statusLabel.text = revealDone ? "Đã xong! Bấm để về sảnh." : (isHost ? string.Empty : "Chờ host mở...");
+                statusLabel.text = revealDone ? "Done! Tap to return to lobby." : (isHost ? string.Empty : "Waiting for host...");
 
             byte chainSlot = gsm.RevealAlbumIndex;
             byte revealedLink = gsm.RevealLinkIndex;
@@ -220,9 +220,9 @@ namespace InkEcho.Hoai.UI
         {
             bool allLinksShown = totalLinks == 0 || revealedLink >= (byte)(totalLinks - 1);
             bool isLastAlbum = chainSlot >= (byte)(playerCount - 1);
-            if (allLinksShown && isLastAlbum) return "Kết thúc";
-            if (allLinksShown) return "Album tiếp theo ▶";
-            return "Tiếp theo ▶";
+            if (allLinksShown && isLastAlbum) return "Finish";
+            if (allLinksShown) return "Next Album";
+            return "Next";
         }
 
         private void RefreshDisplay(AlbumStore album, byte chainSlot, byte revealedLink, byte totalLinks)
@@ -230,7 +230,7 @@ namespace InkEcho.Hoai.UI
             if (titleLabel != null)
             {
                 var entry0 = album.GetEntry(0, chainSlot);
-                titleLabel.text = $"Album của {ResolveName(entry0.OriginPlayer)}";
+                titleLabel.text = $"{ResolveName(entry0.OriginPlayer)}'s Album";
             }
 
             // Link 0 = prompt, shown as soon as album is opened (revealedLink always >= 0)
@@ -270,7 +270,7 @@ namespace InkEcho.Hoai.UI
                     {
                         Debug.LogWarning($"[RevealAlbumPanel] LỖI: drawingImage bị NULL ở slot i={i} trong Inspector!");
                     }
-                    if (dslot.authorLabel != null) dslot.authorLabel.text = $"Vẽ bởi: {ResolveName(entry.WorkerPlayer)}";
+                    if (dslot.authorLabel != null) dslot.authorLabel.text = $"Drawn by: {ResolveName(entry.WorkerPlayer)}";
                 }
                 else
                 {
@@ -279,7 +279,7 @@ namespace InkEcho.Hoai.UI
                         dslot.drawingImage.enabled = false;
                         dslot.drawingImage.gameObject.SetActive(false);
                     }
-                    if (dslot.authorLabel != null) dslot.authorLabel.text = $"Vẽ bởi: {ResolveName(entry.WorkerPlayer)} (chưa tải)";
+                    if (dslot.authorLabel != null) dslot.authorLabel.text = $"Drawn by: {ResolveName(entry.WorkerPlayer)} (not loaded)";
                 }
             }
 

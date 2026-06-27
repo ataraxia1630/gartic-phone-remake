@@ -12,7 +12,7 @@ namespace InkEcho.Hoai.UI
     {
         [SerializeField] private TextMeshProUGUI countdownLabel;
         [SerializeField] private TextMeshProUGUI hintLabel;
-        [SerializeField] private string hintFormat = "Bạn sẽ vẽ tiếp chain {0} sau...";
+        [SerializeField] private string hintFormat = "You will draw chain {0} next...";
         [SerializeField] private RawImage rawDisplayImage;  // preferred — assign in Inspector
         [SerializeField] private Image displayImage;        // fallback if no RawImage
         private bool _rendered;
@@ -186,7 +186,7 @@ namespace InkEcho.Hoai.UI
                 if (pm.TryGetAssignment(runner.LocalPlayer, out var assignment))
                     hintLabel.text = string.Format(hintFormat, assignment.AlbumOriginSlotIndex);
                 else
-                    hintLabel.text = "Quan sát bức vẽ...";
+                    hintLabel.text = "Observe the drawing...";
             }
         }
     }
