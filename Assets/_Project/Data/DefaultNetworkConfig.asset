@@ -16,11 +16,11 @@ MonoBehaviour:
   MinPlayersToStart: 1
   RoomCodeLength: 6
   RoomCodeRetryAttempts: 5
-  PromptPhaseDuration: 30
-  DrawPhaseDuration: 60
-  GuessPhaseDuration: 30
+  PromptPhaseDuration: 20
+  DrawPhaseDuration: 20
+  GuessPhaseDuration: 20
   ObservePhaseDuration: 20
-  FinalGuessPhaseDuration: 30
+  FinalGuessPhaseDuration: 20
   RevealPerAlbumDuration: 8
   ModeConfigs:
   - {fileID: 11400000, guid: e0a3b230a1515eb46a42e6a7ca89b133, type: 2}
