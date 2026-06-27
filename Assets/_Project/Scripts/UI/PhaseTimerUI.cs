@@ -26,7 +26,7 @@ public class PhaseTimerUI : MonoBehaviour
 
         // Cửa số 3: Chạy bình thường
         if (_phaseNameText != null)
-            _phaseNameText.text = "Phase: " + phaseManager.CurrentPhase.ToString();
+            _phaseNameText.text = phaseManager.CurrentPhase.ToString();
 
         if (phaseManager.PhaseTimer.IsRunning)
         {

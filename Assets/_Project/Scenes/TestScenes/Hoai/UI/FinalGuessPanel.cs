@@ -21,8 +21,8 @@ namespace InkEcho.Hoai.UI
         [SerializeField] private TextMeshProUGUI targetChainLabel;
         [SerializeField] private TextMeshProUGUI countdownLabel;
         [SerializeField] private TextMeshProUGUI statusLabel;
-        [SerializeField] private string targetChainFormat = "Đoán prompt gốc của chain #{0}";
-        [SerializeField] private string authorFormat = "Tranh của: {0}";
+        [SerializeField] private string targetChainFormat = "Guess the original prompt of chain #{0}";
+        [SerializeField] private string authorFormat = "Drawing by: {0}";
 
         private bool _submitted;
         private byte _lastShownLink = byte.MaxValue;
@@ -81,7 +81,7 @@ namespace InkEcho.Hoai.UI
             }
             else
             {
-                targetChainLabel.text = "(không có chain để đoán)";
+                targetChainLabel.text = "(no chain to guess)";
             }
         }
 
@@ -135,7 +135,7 @@ namespace InkEcho.Hoai.UI
             _submitted = true;
             if (input != null) input.interactable = false;
             if (submitButton != null) submitButton.interactable = false;
-            if (statusLabel != null) statusLabel.text = "Đã nộp, chờ Reveal…";
+            if (statusLabel != null) statusLabel.text = "Submitted, waiting for Reveal...";
         }
 
         private static string ResolveName(PlayerRef player)

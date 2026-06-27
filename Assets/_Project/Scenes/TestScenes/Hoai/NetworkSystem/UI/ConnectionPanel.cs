@@ -144,7 +144,6 @@ namespace InkEcho.Network.UI
         private void SetRoomCode(string code)
         {
             if (roomCodeText != null) roomCodeText.text = string.IsNullOrEmpty(code) ? "" : $"Code: {code}";
-            Debug.Log($"Set room code display to: {code}");
         }
     }
 }
