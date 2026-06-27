@@ -97,6 +97,22 @@ namespace InkEcho.Network.Players
             }
         }
 
+        // Về sảnh sau khi chơi xong: bỏ trạng thái ready của mọi người
+        // để bắt buộc bấm ready lại trước khi bắt đầu ván mới.
+        public void ResetReadyFlags()
+        {
+            if (!HasStateAuthority) return;
+            var keys = new List<PlayerRef>();
+            foreach (var pair in Slots) keys.Add(pair.Key);
+            foreach (var key in keys)
+            {
+                var slot = Slots.Get(key);
+                slot.IsReady = false;
+                slot.HasSubmittedPhase = false;
+                Slots.Set(key, slot);
+            }
+        }
+
         public void PlayerLeft(PlayerRef player)
         {
             if (!HasStateAuthority) return;

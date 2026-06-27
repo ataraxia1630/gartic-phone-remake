@@ -42,7 +42,7 @@ namespace InkEcho.Network.StateMachine.States
             if (!machine.HasStateAuthority) return;
 
             var registry = ServiceLocator.Get<Players.PlayerRegistry>();
-            registry?.ResetSubmittedFlags();
+            registry?.ResetReadyFlags();
 
             var phaseManager = ServiceLocator.Get<Phases.PhaseManager>();
             phaseManager?.ResetForLobby();
